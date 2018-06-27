@@ -31,7 +31,7 @@
                   parent="dtfg_menu_mobile_setting" action="weixin_mobile_grid_action"/>
 
         <record id='weixin_mobile_action_tree' model='ir.ui.view'>
-            <field name='name'>mobile.action.tree</field>
+            <field name='name'>mobile action tree</field>
             <field name='model'>mobile.action</field>
             <field name='arch' type='xml'>
                 <tree string='action' editable='bottom'>
@@ -61,7 +61,7 @@
                   parent="dtfg_menu_mobile_setting" action="weixin_mobile_action_action"/>
 
         <record id='weixin_mobile_field_tree' model='ir.ui.view'>
-            <field name='name'>mobile.field.tree</field>
+            <field name='name'>mobile field tree</field>
             <field name='model'>mobile.field</field>
             <field name='arch' type='xml'>
                 <tree string='field'>
