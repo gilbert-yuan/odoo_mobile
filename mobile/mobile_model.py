@@ -1,83 +1,77 @@
 # coding=utf-8
 # -*- coding: utf-8 -*-
 import jinja2, sys, os
-import simplejson, openerp
-from openerp.addons.web.controllers.main import ensure_db
-from openerp import http
-from openerp.http import request
-from openerp.osv import fields, osv
+import simplejson, odoo
+from odoo.addons.web.controllers.main import ensure_db
+from odoo import http
+from odoo.http import request
+from odoo import api, fields, models, _
+from odoo.tools.float_utils import float_round as float_round
 import copy, datetime
 from dateutil.relativedelta import relativedelta
 ISODATEFORMAT = '%Y-%m-%d'
 ISODATETIMEFORMAT = "%Y-%m-%d %H:%M:%S"
 MOBILEDATETIMEFORMAT = "%Y-%m-%d %H:%M"
 SUPERUSER_ID = 1
-from openerp.tools import float_round
 
 if hasattr(sys, 'frozen'):
     # When running on compiled windows binary, we don't have access to package loader.
     path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'html'))
     loader = jinja2.FileSystemLoader(path)
 else:
-    loader = jinja2.PackageLoader('openerp.addons.mobile', "")
+    loader = jinja2.PackageLoader('odoo.addons.mobile', "")
 
 env = jinja2.Environment('<%', '%>', '${', '}', '%', loader=loader, autoescape=True)
 
 
-class MobileGridLabel(osv.osv):
+class MobileGridLabel(models.Model):
     """
 
     """
     _name = 'mobile.grid.label'
 
-    _columns = {
-        'name': fields.char(u'名称'),
-        'sequence': fields.integer(u'顺序'),
-    }
+    name = fields.Char(u'名称')
+    sequence = fields.Integer(u'顺序')
 
 
-class MobileAction(osv.osv):
+class MobileAction(models.Model):
     _name = 'mobile.action'
     _rec_name = 'mobile_grid_id'
 
-    def _compute_mobile_view_id(self, cr, uid, ids, name, args, context=None):
-        res = {}
-        for action_id in ids:
-            view_id = self.pool.get('mobile.view').search(cr, uid, [('mobile_action_id', '=', action_id)], context=context)
-            res[action_id] = view_id and view_id[0]
-        return res
+    def _compute_mobile_view_id(self):
+        for action_id in self:
+            view_id = self.env['mobile.view'].search([('mobile_action_id', '=', action_id.id)], limit=1)
+            action_id.mobile_view_id = view_id.id
 
-    _columns = {
-        'model_id': fields.many2one('ir.model', u'模型名称'),
-        'name': fields.char(u'名称'),
-        'limit': fields.integer('limit'),
-        'offset': fields.integer('offset'),
-        'order': fields.char('order'),
-        'context': fields.char('context'),
-        'mobile_grid_id': fields.many2one('mobile.grid', u'Grid ID'),
-        'mobile_view_id': fields.function(_compute_mobile_view_id, type='many2one', relation='mobile.view', string=u'Grid ID')
-    }
+    model_id = fields.Many2one('ir.model', u'模型名称')
+    name = fields.Char(u'名称')
+    limit = fields.Integer('limit')
+    offset = fields.Integer('offset')
+    order = fields.Char('order')
+    context = fields.Char('context')
+    mobile_grid_id = fields.Many2one('mobile.grid', u'Grid ID')
+    mobile_view_id = fields.Many2one('mobile.view', compute='_compute_mobile_view_id', string=u'Grid ID')
+
     _sql_constraints =[
         ('model_mobile_grid_id_field_id_uniq', 'unique (mobile_grid_id)', u'一个菜单只能对应一个动作'),
     ]
 
 
-class MobileView(osv.osv):
+class MobileView(models.Model):
     _name = 'mobile.view'
     _rec_name = 'mobile_action_id'
 
-    _columns = {
-        'mobile_action_id': fields.many2one('mobile.action', u'动作'),
-        'mobile_field_ids': fields.one2many('mobile.field', 'view_id', string=u'视图表', copy=True),
-        'no_form': fields.boolean(u'不显示form'),
-        'model_id': fields.many2one('ir.model', u'模型名称', copy=True),
-        'domain_ids': fields.one2many('mobile.domain', 'view_id', string="domain", copy=True),
-        'view_type': fields.selection([('tree', u'列表视图'), ('card', u'看板'),
-                                       ('view_form', u'表单'), ('edit_form', '编辑表单')], u'view type', copy=True),
-        'button_ids': fields.one2many('mobile.button', 'view_id', string='buttons', copy=True),
-        'show_form_view': fields.many2one('mobile.view', u'展示表单', copy=True),
-        'context': fields.text(u'附加值'),
-    }
+    mobile_action_id = fields.Many2one('mobile.action', u'动作')
+    mobile_field_ids = fields.One2many('mobile.field', 'view_id', string=u'视图表', copy=True)
+    no_form = fields.Boolean(u'不显示form', defult=True)
+    model_id = fields.Many2one('ir.model', u'模型名称', copy=True)
+    domain_ids = fields.One2many('mobile.domain', 'view_id', string="domain", copy=True)
+    view_type = fields.Selection([('tree', u'列表视图'), ('card', u'看板'),
+                                   ('view_form', u'表单'), ('edit_form', '编辑表单')], u'view type', copy=True)
+    button_ids = fields.One2many('mobile.button', 'view_id', string='buttons', copy=True)
+    show_form_view = fields.Many2one('mobile.view', u'展示表单', copy=True)
+    context = fields.Text(u'附加值')
+
     _defaults = {
         'no_form': True
     }
@@ -87,80 +81,74 @@ class MobileView(osv.osv):
     ]
 
 
-class One2ManyField(osv.osv):
+class One2ManyField(models.Model):
     _name = 'one.many.field'
-    _columns = {
-        'mobile_field_ids': fields.one2many('mobile.field', 'view_id', string=u'视图表'),
-    }
+
+    mobile_field_ids = fields.Many2many('mobile.field', 'view_id', string=u'视图表'),
 
 
-class MobileDomain(osv.osv):
+class MobileDomain(models.Model):
     _name = 'mobile.domain'
     _order = 'sequence'
-    _columns = {
-        'view_id': fields.many2one('mobile.view', string='view', copy=True),
-        'domain': fields.char(u'domain', copy=True),
-        'sequence': fields.integer(u'顺序', copy=True),
-        'name': fields.char(u'名称', copy=True)
-    }
+
+    view_id = fields.Many2one('mobile.view', string='view', copy=True)
+    domain = fields.Char(u'domain', copy=True)
+    sequence = fields.Integer(u'顺序', copy=True)
+    name = fields.Char(u'名称', copy=True)
 
 
-class MobileButton(osv.osv):
+class MobileButton(models.Model):
     _name = 'mobile.button'
-    _columns = {
-        'name': fields.char(u'名称', copy=True),
-        'button_method': fields.char(u'方法名', copy=True),
-        'show_condition': fields.char(u'显示前提', copy=True),
-        'view_id': fields.many2one('mobile.view', string=u'视图', copy=True),
-        'group_ids': fields.many2many('res.groups', 'button_groups_rel', 'button_id', 'group_id', string='用户组')
-    }
-    _defaults = {
-        'show_condition': []
-    }
+
+    name = fields.Char(u'名称', copy=True)
+    button_method = fields.Char(u'方法名', copy=True)
+    show_condition = fields.Char(u'显示前提', copy=True, default='[]')
+    view_id = fields.Many2one('mobile.view', string=u'视图', copy=True)
+    group_ids = fields.Many2many('res.groups', 'button_groups_rel', 'button_id', 'group_id', string='用户组')
 
 
-class MobileField(osv.osv):
+class MobileField(models.Model):
     _name = 'mobile.field'
     _order = 'sequence'
-    _columns = {
-        'sequence': fields.integer(u'序列'),
-        'view_id': fields.many2one('mobile.view', u'视图ID', copy=True),
-        'ir_field': fields.many2one('ir.model.fields', u'字段', copy=True),
-        'domain': fields.char(u'domain'),
-        'field_type': fields.related('ir_field', 'ttype', type='char', string=u'字段类型', readonly=True, copy=True),
-        'field_relation': fields.related('ir_field', 'relation', type='char', string=u'字段关联', readonly=True, copy=True),
-        'field_selection': fields.related('ir_field', 'selection', type='char', string=u'选择项目', readonly=True,
-                                          copy=True),
-        'model_id': fields.many2one('ir.model', string=u'类型', copy=True),
-        'required': fields.boolean(u'必输', copy=True),
-        'readonly': fields.boolean(u'只读', copy=True),
-        'invisible': fields.boolean(u'不可见', copy=True),
-        'is_show_edit_form': fields.boolean(u'form不可见', copy=True),
-        'is_show_form_tree': fields.boolean(u'tree不可见', copy=True),
-        'field_id': fields.many2one('mobile.field', 'field_id', copy=True),
-        'many_field': fields.one2many('mobile.field', 'field_id', string='one2many', copy=True)
-    }
+
+    @api.model
+    def _get_field_types(self):
+        # retrieve the possible field types from the field classes' metaclass
+        return sorted((key, key) for key in fields.MetaField.by_type)
+
+    sequence = fields.Integer(u'序列')
+    view_id = fields.Many2one('mobile.view', u'视图ID', copy=True)
+    ir_field = fields.Many2one('ir.model.fields', u'字段', copy=True)
+    domain = fields.Char(u'domain')
+    field_type = fields.Selection(selection='_get_field_types', related="ir_field.ttype", string=u'字段类型', readonly=True, copy=True)
+    field_relation = fields.Char(related="ir_field.relation", string=u'字段关联', readonly=True, copy=True)
+    field_selection = fields.Char(related="ir_field.selection", string=u'选择项目', readonly=True, copy=True)
+    model_id = fields.Many2one('ir.model', string=u'类型', copy=True)
+    required = fields.Boolean(u'必输', copy=True)
+    readonly = fields.Boolean(u'只读', copy=True)
+    invisible = fields.Boolean(u'不可见', copy=True)
+    is_show_edit_form = fields.Boolean(u'form不可见', copy=True)
+    is_show_form_tree = fields.Boolean(u'tree不可见', copy=True)
+    field_id = fields.Many2one('mobile.field', 'field_id', copy=True)
+    many_field = fields.One2many('mobile.field', 'field_id', string='one2many', copy=True)
 
 
-class MobileGrid(osv.osv):
+class MobileGrid(models.Model):
     _name = 'mobile.grid'
     _rec_name = 'title'
     _order = 'sequence'
 
-    def _compute_mobile_action_id(self, cr, uid, ids, name, args, context=None):
-        res = {}
-        for grid_id in ids:
-            action_id = self.pool.get('mobile.action').search(cr, uid, [('mobile_grid_id', '=', grid_id)], context=context)
-            res[grid_id] = action_id and action_id[0]
-        return res
+    def _compute_mobile_action_id(self):
 
-    _columns = {
-        'label_id': fields.many2one('mobile.grid.label', u'分类'),
-        'sequence': fields.related('label_id', 'sequence', type='integer', string=u'顺序', readonly=True),
-        'image': fields.binary(u'图片'),
-        'mobile_action_id': fields.function(_compute_mobile_action_id, type='many2one', relation='mobile.action', string=u'动作'),
-        'title': fields.char(u'名称')
-    }
+        for grid in self:
+            action_id = self.env['mobile.action'].search([('mobile_grid_id', '=', grid.id)], limit=1)
+            grid.mobile_action_id = action_id.id
+
+    label_id = fields.Many2one('mobile.grid.label', u'分类')
+    sequence = fields.Integer(related='label_id.sequence', string=u'顺序', readonly=True)
+    image = fields.Binary(u'图片')
+    mobile_action_id = fields.Many2one('mobile.action', compute='_compute_mobile_action_id', string=u'动作')
+    title = fields.Char(u'名称')
 
 
 view_type = {
@@ -178,12 +166,10 @@ class MobileController(http.Controller):
 
     @http.route('/odoo/mobile/get/all/grid_data', auth='user', type='http', method=['GET'])
     def get_all_grid_data(self, **args):
-        cr, context, pool = request.cr, request.context, request.registry
         uid = request.session.get('uid') or SUPERUSER_ID
-        grid_obj = pool.get('mobile.grid')
+        grid_obj = request.env['mobile.grid']
         allGridData = {}
-        grid_ids = grid_obj.search(cr, uid, [], context=context)
-        for grid in grid_obj.browse(cr, uid, grid_ids, context=context):
+        for grid in grid_obj.search([]):
             allGridData.setdefault(grid.label_id, []).append({
                 'title': grid.title,
                 'actionId': grid.mobile_action_id.id,
@@ -197,9 +183,8 @@ class MobileController(http.Controller):
     @http.route('/odoo/mobile/get/action/views', auth='user', type='http', method=['GET'])
     def get_action_views(self, **args):
         action_id = int(args.get('actionId', 0))
-        cr, context, pool = request.cr, request.context, request.registry
         uid = request.session.get('uid') or SUPERUSER_ID
-        action_row = pool.get('mobile.action').browse(cr, uid, action_id, context=context)
+        action_row = request.env['mobile.action'].browse(action_id)
         views_data = [{'title': domain.name,
                        'sequence': domain.sequence,
                        'domain': domain.domain} for domain in action_row.mobile_view_id.domain_ids]
@@ -232,13 +217,11 @@ class MobileController(http.Controller):
         model_name = args.get('model')
         if not model_name:
             return simplejson.dumps({})
-        cr, context, pool = request.cr, request.context, request.registry
         uid = request.session.get('uid') or SUPERUSER_ID
-        record_ids = pool.get(model_name).search(cr, uid, domain, offset=offset, limit=limit, order=order, context=context)
+        record_rows = request.env[model_name].search(domain, offset=offset, limit=limit, order=order)
         return_val = []
-        for view_row in pool.get('mobile.view').browse(cr, uid, view_id, context=context):
-            return_val = self.get_view_type_function(view_row.view_type)(pool, cr, uid, view_row,
-                                                                         record_ids, model_name, context=context)
+        for view_row in request.env['mobile.view'].browse(view_id):
+            return_val = self.get_view_type_function(view_row.view_type)(view_row, record_rows, model_name)
             return simplejson.dumps(return_val)
         return simplejson.dumps(return_val)
 
@@ -262,14 +245,14 @@ class MobileController(http.Controller):
             'name': field.ir_field.name,
         }
 
-    def get_tree_view_data(self, pool, cr, uid, view_row, record_ids, model_name, context=None):
+    def get_tree_view_data(self, view_row, record_rows, model_name):
         return_val = []
         all_field = []
         for field in view_row.mobile_field_ids:
             all_field.append(self.get_all_field_setting(field))
         for button in view_row.button_ids:
-            domain = eval(button.show_condition or '[]') + [('id', 'in', record_ids)]
-            mode_ids = pool.get(model_name).search(cr, uid, domain, context=context)
+            domain = eval(button.show_condition or '[]') + [('id', 'in', [record.id for record in record_rows])]
+            mode_ids = request.env[model_name].search(domain)
             all_field.append({
                 'title': button.name,
                 'type': 'button',
@@ -279,9 +262,9 @@ class MobileController(http.Controller):
                 'ids': mode_ids,
                 'invisible': button.show_condition
             })
-        for record in pool.get(model_name).browse(cr, uid, record_ids, context=context):
+        for record in record_rows:
             new_fields = copy.deepcopy(all_field)
-            [field.update(self.card_show_val( uid,  record, field, context=context))
+            [field.update(self.card_show_val(record, field))
              for field in new_fields]
             tree_val = {
                 'title': record['display_name'],
@@ -291,14 +274,14 @@ class MobileController(http.Controller):
             return_val.append(tree_val)
         return return_val
 
-    def get_card_view_data(self, pool, cr, uid, view_row, record_ids, model_name, context=None):
+    def get_card_view_data(self, view_row, record_rows, model_name):
         return_val = []
         all_field = []
         for field in view_row.mobile_field_ids:
             all_field.append(self.get_all_field_setting(field))
         for button in view_row.button_ids:
-            domain = eval(button.show_condition or '[]') + [('id', 'in', record_ids)]
-            mode_ids = pool.get(model_name).search(cr, uid, domain, context=context)
+            domain = eval(button.show_condition or '[]') + [('id', 'in', [record.id for record in record_rows])]
+            mode_ids = request.env[model_name].search(domain)
             all_field.append({
                 'title': button.name,
                 'type': 'button',
@@ -308,37 +291,37 @@ class MobileController(http.Controller):
                 'ids': mode_ids,
                 'invisible': button.show_condition
             })
-        for record in pool.get(model_name).browse(cr, uid, record_ids, context=context):
+        for record in record_rows:
             new_fields = copy.deepcopy(all_field)
-            [field.update(self.card_show_val(uid, record, field, context=context))
+            [field.update(self.card_show_val(record, field))
              for field in new_fields]
             return_val.append({'fieldVals': new_fields, 'id': record.id})
         return return_val
 
-    def card_show_val(self, uid, record, field, context=None):
+    def card_show_val(self, record, field):
         return_value = {}
         if field.get('type') not in ('button', 'one2many', 'many2one'):
-            return_value.update({'value': self.card_field_type_get_val(field, record, context=context)})
+            return_value.update({'value': self.card_field_type_get_val(field, record)})
         elif field.get('type') == 'many2one':
-            options = self.card_field_type_get_val(field, record, context=context)
-            return_value.update({'options': self.card_field_type_get_val(field, record, context=context),
+            options = self.card_field_type_get_val(field, record)
+            return_value.update({'options': self.card_field_type_get_val(field, record),
                                  'value': options and options[0] and options[0].get('key')})
         elif field.get('type') == 'many2many':
-            options = self.card_field_type_get_val(field, record, context=context)
-            return_value.update({'options': self.card_field_type_get_val(field, record, context=context),
+            options = self.card_field_type_get_val(field, record)
+            return_value.update({'options': self.card_field_type_get_val(field, record),
                                  'value': options and options[0] and options[0].get('key')})
         elif field.get('type') == 'button':
             return_value.update(
-                {'invisible': False if record['id'] in field.get('ids') and uid in field.get('user_ids', []) else True})
+                {'invisible': False if record['id'] in field.get('ids') and self._uid in field.get('user_ids', []) else True})
         elif field.get('type') == 'one2many':
-            value, ids = self.get_show_tree_one2many(uid, record, field, context=context)
+            value, ids = self.get_show_tree_one2many(record, field)
             return_value.update({'value': value,
                                  'ids': ids,
-                                 'table': self.get_record_one2many(uid, record, field,
-                                                                   context=dict(context, **{'table': True}))
+                                 'table': self.get_record_one2many(record, field,
+                                                                   context=dict(self._context, **{'table': True}))
                                  })
         elif field.get('type') == 'selection':
-            value = self.card_field_type_get_val(record, field, context=context)
+            value = self.card_field_type_get_val(record, field)
             return_value.update({'value': value,
                                  'options': [{'key': value[0], 'value': value[1]} for value in
                                              record._fields[field.get('name')].selection]
@@ -354,7 +337,7 @@ class MobileController(http.Controller):
         for line in record[field.get('name')]:
             line_ids.append(line['id'])
             new_fields = copy.deepcopy(many_field)
-            [field.update(self.card_show_val(uid,  line, field, context=dict(context, **{'table': True})))
+            [field.update(self.card_show_val(line, field, context=dict(context, **{'table': True})))
              for field in new_fields]
             tree_val = {
                 'title': line['display_name'],
@@ -364,7 +347,7 @@ class MobileController(http.Controller):
             all_tree_row.append(tree_val)
         return all_tree_row, line_ids
 
-    def card_field_type_get_val(self, field, record, context=None):
+    def card_field_type_get_val(self, field, record):
         type = field.get('type')
         value = record[field.get('name')]
         if not value:
@@ -387,7 +370,7 @@ class MobileController(http.Controller):
             return value
         return ''
 
-    def get_record_one2many(self, uid, record, field, context=None):
+    def get_record_one2many(self,record, field):
         table_header, table_body = [], []
         many_field = field.get('many_field', [])
         if not (many_field and field.get('name')):
@@ -396,7 +379,7 @@ class MobileController(http.Controller):
             table_header.append(son_field.get('title'))
         for line in record[field.get('name')]:
             new_fields = copy.deepcopy(many_field)
-            [field.update(self.card_show_val(uid,  line, field, context=context))
+            [field.update(self.card_show_val(line, field))
              for field in new_fields]
             table_body.append(new_fields)
         return {'tableTh': table_header, 'tableBody': table_body}
@@ -409,10 +392,10 @@ class MobileController(http.Controller):
         model = args.get('model')
         method = args.get('method')
         ids = int(args.get('ids'))
-        model_obj = pool.get(model)
+        model_obj = request.env[model].browse(ids)
         if model_obj and hasattr(model_obj, method) and ids:
             try:
-                getattr(model_obj, method)(cr, uid, ids, context=context)
+                getattr(model_obj, method)(ids)
                 return simplejson.dumps({'success': True})
             except Exception as exc:
                 if isinstance(exc, basestring):
@@ -432,37 +415,37 @@ class MobileController(http.Controller):
             field_value.update({'model': field.ir_field.relation, 'domain': field.domain, 'options': []})
         return field_value
 
-    def set_default_val(self, pool, cr, uid, field_value, default_val):
+    def set_default_val(self,field_value, default_val):
         if default_val.get(field_value.get('name')):
             if field_value.get('type') == 'many2one':
-                options = pool.get(field_value.get('model')).name_get(cr, uid, default_val.get(field_value.get('name')), context=None)
+                options = request.env[field_value.get('model')].name_get(default_val.get(field_value.get('name')))
                 return {'value': default_val.get(field_value.get('name')), 'options': [{'key': option[0], 'value':option[1]} for option in options]}
             else:
                 return {'value': default_val.get(field_value.get('name'))}
         return {}
     
-    def get_form_view_data(self, pool, cr, uid, view_row, record_ids, model_name, context=None):
+    def get_form_view_data(self, view_row, record_ids, model_name):
         all_field = []
-        default_val = pool.get(model_name).default_get(cr, uid, [field.ir_field.name for field
-                                                                 in view_row.mobile_field_ids], context=context)
+        default_val = request.env[model_name].default_get([field.ir_field.name for field
+                                                                 in view_row.mobile_field_ids])
         for field in view_row.mobile_field_ids:
             field_value = self.get_all_field_setting(field)
             if field.field_type == 'many2one':
                 field_value.update({'model': field.ir_field.relation, 'domain': field.domain or []})
             if field.field_type == 'selection':
                 field_value.update({'options': [{'key': value[0], 'value': value[1]} for value in
-                                                pool.get(model_name)._fields[field_value.get('name')].selection]})
+                                                request.env[model_name]._fields[field_value.get('name')].selection]})
             if field.field_type == 'one2many':
                 field_value.update({'many_field': [self.get_many_field_value(field) for field in field.many_field],
                                     'value': []})
             if field.field_type == 'many2many':
                 field_value.update({'model': field.ir_field.relation, 'domain': field.domain or []})
 
-            field_value.update(self.set_default_val(pool, cr, uid, field_value, default_val))
+            field_value.update(self.set_default_val(field_value, default_val))
             all_field.append(field_value)
         for button in view_row.button_ids:
             domain = eval(button.show_condition or '[]') + [('id', '=', record_ids)]
-            mode_ids = pool.get(model_name).search(cr, uid, domain, context=context)
+            mode_ids = request.env[model_name].search(domain)
             all_field.append({
                 'title': button.name,
                 'type': 'button',
@@ -472,9 +455,9 @@ class MobileController(http.Controller):
                 'ids': mode_ids,
                 'invisible': button.show_condition
             })
-        for record in pool.get(model_name).browse(cr, uid, record_ids, context=context):
+        for record in request.env[model_name].browse(record_ids):
             new_fields = copy.deepcopy(all_field)
-            [field.update(self.card_show_val(uid,  record, field, context=context))
+            [field.update(self.card_show_val(record, field))
              for field in new_fields]
             return {'fieldVals': new_fields, 'id': record.id}
 
@@ -491,7 +474,7 @@ class MobileController(http.Controller):
         view_row = pool.get('mobile.view').browse(cr, uid, view_id, context=context)
         return_val = {}
         if model_name:
-            return_val = self.get_form_view_data(pool, cr, uid, view_row.show_form_view, id, model_name, context=context)
+            return_val = self.get_form_view_data(view_row.show_form_view, id, model_name)
         return simplejson.dumps(return_val)
 
     @http.route('/odoo/mobile/model/name_search', auth='user', type='http', method=['GET'])
@@ -551,7 +534,6 @@ class MobileController(http.Controller):
 
     @http.route('/odoo/mobile/save/record', auth='user', type='json', method=['POST'])
     def create_new_record(self, **args):
-        cr, context, pool = request.cr, request.context, request.registry
         uid = request.session.get('uid') or SUPERUSER_ID
         model = request.jsonrequest.get('model')
         vals = request.jsonrequest.get('value')
@@ -561,10 +543,10 @@ class MobileController(http.Controller):
         try:
             if not id:
                 vals.update(context_val.get('default_vals', {}))
-                pool.get(model).create(cr, uid, vals, context=context)
+                request.env[model].create(vals)
                 return {'success': True, 'errMsg': u'创建成功！'}
             else:
-                pool.get(model).write(cr, uid, id, vals, context=context)
+                request.env[model].browse(id).write(vals)
                 return {'success': True, 'errMsg': u'修改成功！'}
         except Exception as exc:
             if isinstance(exc, basestring):
@@ -582,8 +564,8 @@ class MobileController(http.Controller):
         password = request.jsonrequest.get('password')
         ensure_db()
         if not request.uid:
-            request.uid = openerp.SUPERUSER_ID
-        uid = request.session.authenticate(request.httpsession.db, name, password)
+            request.uid = odoo.SUPERUSER_ID
+        uid = request.env['res.users'].authenticate(request.db, name, password, None)
         if uid:
             return {'success': True, 'errMsg': u'登录成功！', 'uid': uid}
         else:
