@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <menuitem id="dtfg_menu_mobile" name="手机视图" />
+        <menuitem id="dtfg_menu_mobile_setting" name="手机视图设置" parent="dtfg_menu_mobile"/>
+        <record id='weixin_mobile_grid_tree' model='ir.ui.view'>
+            <field name='name'>mobile.grid.tree</field>
+            <field name='model'>mobile.grid</field>
+            <field name='arch' type='xml'>
+                <tree string='手机菜单' editable='bottom'>
+                    <field name='label_id' />
+                    <field name='sequence'/>
+                    <field name='image'/>
+                    <field name='title' />
+                </tree>
+            </field>
+        </record>
+        <record id="weixin_mobile_grid_action" model="ir.actions.act_window">
+            <field name="name">Grid</field>
+            <field name="res_model">mobile.grid</field>
+            <field name="view_type">form</field>
+             <field name="view_mode">tree</field>
+            <field name="help" type="html">
+              <p class="oe_view_nocontent_create">
+                Click to register new expenses.
+              </p><p>
+              </p>
+            </field>
+        </record>
+        <menuitem id="dtfg_menu_mobile_setting_grid" name="Grid"
+                  parent="dtfg_menu_mobile_setting" action="weixin_mobile_grid_action"/>
+
+        <record id='weixin_mobile_action_tree' model='ir.ui.view'>
+            <field name='name'>mobile.action.tree</field>
+            <field name='model'>mobile.action</field>
+            <field name='arch' type='xml'>
+                <tree string='action' editable='bottom'>
+                    <field name='model_id' />
+                    <field name='name' />
+                    <field name='limit'/>
+                    <field name='offset'/>
+                    <field name="order"/>
+                    <field name='context' />
+                    <field name='mobile_grid_id' />
+                </tree>
+            </field>
+        </record>
+        <record id="weixin_mobile_action_action" model="ir.actions.act_window">
+            <field name="name">action</field>
+            <field name="res_model">mobile.action</field>
+            <field name="view_type">form</field>
+             <field name="view_mode">tree</field>
+            <field name="help" type="html">
+              <p class="oe_view_nocontent_create">
+                Click to register new expenses.
+              </p><p>
+              </p>
+            </field>
+        </record>
+        <menuitem id="dtfg_menu_mobile_setting_action" name="Action"
+                  parent="dtfg_menu_mobile_setting" action="weixin_mobile_action_action"/>
+
+        <record id='weixin_mobile_field_tree' model='ir.ui.view'>
+            <field name='name'>mobile.field.tree</field>
+            <field name='model'>mobile.field</field>
+            <field name='arch' type='xml'>
+                <tree string='field'>
+                    <field name='sequence' />
+                    <field name='view_id' />
+                    <field name='ir_field' domain="[('model_id', '=', model_id)]"/>
+                    <field name='field_relation' />
+                    <field name='field_selection' />
+                    <field name='model_id' />
+                    <field name='readonly' />
+                    <field name='required' />
+                    <field name='invisible' />
+                    <field name='is_show_edit_form' />
+                    <field name='is_show_form_tree' />
+                </tree>
+            </field>
+        </record>
+        <record id='weixin_mobile_field_form' model='ir.ui.view'>
+            <field name='name'>mobile.field.tree</field>
+            <field name='model'>mobile.field</field>
+            <field name='arch' type='xml'>
+                <form string='field'>
+                    <group>
+                        <field name='view_id' />
+                        <field name='ir_field'  domain="[('model_id', '=', model_id)]"/>
+                        <field name='field_relation' />
+                        <field name='field_selection' />
+                        <field name='model_id' />
+                        <field name='readonly' />
+                        <field name='required' />
+                        <field name='invisible' />
+                        <field name='is_show_edit_form' />
+                        <field name='is_show_form_tree' />
+                        <field name='many_field' />
+                    </group>
+                </form>
+            </field>
+        </record>
+        <record id="weixin_mobile_field_action" model="ir.actions.act_window">
+            <field name="name">action</field>
+            <field name="res_model">mobile.field</field>
+            <field name="view_type">form</field>
+             <field name="view_mode">tree,form</field>
+            <field name="help" type="html">
+              <p class="oe_view_nocontent_create">
+                Click to register new expenses.
+              </p><p>
+              </p>
+            </field>
+        </record>
+        <!--<menuitem id="dtfg_menu_mobile_setting_field" name="field" -->
+                  <!--parent="dtfg_menu_mobile_setting" action="weixin_mobile_field_action"/>-->
+
+
+        <record id='weixin_mobile_view_tree' model='ir.ui.view'>
+            <field name='name'>mobile.view.tree</field>
+            <field name='model'>mobile.view</field>
+            <field name='arch' type='xml'>
+                <tree string='view'>
+                    <field name='mobile_field_ids' />
+                    <field name='no_form' />
+                    <field name='domain_ids'/>
+                    <field name='view_type' />
+                </tree>
+            </field>
+        </record>
+        <record id='weixin_mobile_view_form' model='ir.ui.view'>
+            <field name='name'>mobile.view.form</field>
+            <field name='model'>mobile.view</field>
+            <field name='arch' type='xml'>
+                <form string='view'>
+                    <group>
+                        <field name='mobile_action_id' />
+                        <field name='mobile_field_ids' />
+                        <field name='no_form' />
+                        <field name='domain_ids' attrs="{'invisible': [('view_type', 'not in', ('tree', 'card'))]}"/>
+                        <field name='view_type' />
+                        <field name='context' />
+                        <field name='button_ids'/>
+                        <field name='show_form_view' attrs="{'invisible':[('no_form', '=', True)]}"/>
+                    </group>
+                </form>
+            </field>
+        </record>
+        <record id="weixin_mobile_view_action" model="ir.actions.act_window">
+            <field name="name">action</field>
+            <field name="res_model">mobile.view</field>
+            <field name="view_type">form</field>
+             <field name="view_mode">tree,form</field>
+            <field name="help" type="html">
+              <p class="oe_view_nocontent_create">
+                Click to register new expenses.
+              </p><p>
+              </p>
+            </field>
+        </record>
+        <menuitem id="dtfg_menu_mobile_setting_view" name="View"
+                  parent="dtfg_menu_mobile_setting" action="weixin_mobile_view_action"/>
+
+        <record id='weixin_mobile_domain_form' model='ir.ui.view'>
+            <field name='name'>mobile.domain.form</field>
+            <field name='model'>mobile.domain</field>
+            <field name='arch' type='xml'>
+                <tree string='view'>
+                    <field name='domain' />
+                    <field name='sequence'/>
+                    <field name='name' />
+                </tree>
+            </field>
+        </record>
+        <record id="weixin_mobile_domain_action" model="ir.actions.act_window">
+            <field name="name">domain</field>
+            <field name="res_model">mobile.domain</field>
+            <field name="view_type">form</field>
+             <field name="view_mode">tree</field>
+            <field name="help" type="html">
+              <p class="oe_view_nocontent_create">
+                Click to register new expenses.
+              </p><p>
+              </p>
+            </field>
+        </record>
+
+         <record id='weixin_mobile_button_tree' model='ir.ui.view'>
+            <field name='name'>mobile.button.form</field>
+            <field name='model'>mobile.button</field>
+            <field name='arch' type='xml'>
+                <tree string='view'>
+                    <field name='name' />
+                    <field name='button_method'/>
+                    <field name='show_condition' />
+                    <field name='group_ids' />
+                </tree>
+            </field>
+        </record>
+        <record id='weixin_mobile_button_form' model='ir.ui.view'>
+            <field name='name'>mobile.button.form</field>
+            <field name='model'>mobile.button</field>
+            <field name='arch' type='xml'>
+                <form string='view' >
+                    <group>
+                        <field name='name' />
+                        <field name='button_method'/>
+                        <field name='show_condition' />
+                        <field name='group_ids' />
+                    </group>
+                </form>
+            </field>
+        </record>
+        <record id="weixin_mobile_button_action" model="ir.actions.act_window">
+            <field name="name">button</field>
+            <field name="res_model">mobile.button</field>
+            <field name="view_type">form</field>
+             <field name="view_mode">tree</field>
+            <field name="help" type="html">
+              <p class="oe_view_nocontent_create">
+                Click to register new expenses.
+              </p><p>
+              </p>
+            </field>
+        </record>
+    </data>
+</openerp>
