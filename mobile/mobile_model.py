@@ -329,7 +329,7 @@ class MobileController(http.Controller):
                                  'value': options and options[0] and options[0].get('key')})
         elif field.get('type') == 'button':
             return_value.update(
-                {'invisible': False if record['id'] in field.get('ids') and uid in field.get('user_ids', []) else True})
+                {'invisible': False if record['id'] in field.get('ids') and len(field.get('user_ids', [])) else True})
         elif field.get('type') == 'one2many':
             value, ids = self.get_show_tree_one2many(uid, record, field, context=context)
             return_value.update({'value': value,
@@ -467,7 +467,7 @@ class MobileController(http.Controller):
                 'title': button.name,
                 'type': 'button',
                 'value': button.button_method,
-                'user_ids': [user.id for group in button.group_ids for user in group.users],
+                'user_ids': [True for group in button.group_ids if uid in [user.id for user in group.users]],
                 'model': model_name,
                 'ids': mode_ids,
                 'invisible': button.show_condition
