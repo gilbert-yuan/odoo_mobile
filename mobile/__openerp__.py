@@ -8,11 +8,12 @@
         """,
     'author': "静静（gilbert@osbzr.com）",
     'website': "http://control.blog.sina.com.cn/blog_rebuild/profile/controllers/points_action.php",
-    "category": "osbzr",
+    "category": "gilbert",
     "version": "8.0.0.1",
     "depends": ['base'],
     "data": [
         'mobile_model.xml',
+        'security/ir.model.access.csv',
     ],
     'installable': True,
     'application': False,

@@ -69,12 +69,13 @@ class MobileView(osv.osv):
     _columns = {
         'mobile_action_id': fields.many2one('mobile.action', u'动作'),
         'mobile_field_ids': fields.one2many('mobile.field', 'view_id', string=u'视图表', copy=True),
-        'no_form': fields.boolean(u'不显示form'),
+        'no_form': fields.boolean(u'不显示form', help="视图类型是card的，不推荐再次显示form"),
         'model_id': fields.many2one('ir.model', u'模型名称', copy=True),
         'domain_ids': fields.one2many('mobile.domain', 'view_id', string="domain", copy=True),
         'view_type': fields.selection([('tree', u'列表视图'), ('card', u'看板'),
-                                       ('view_form', u'表单'), ('edit_form', '编辑表单')], u'view type', copy=True),
-        'button_ids': fields.one2many('mobile.button', 'view_id', string='buttons', copy=True),
+                                       ('view_form', u'表单'), ('edit_form', '编辑表单')], u'view type',
+                                      help="", copy=True),
+        'button_ids': fields.one2many('mobile.button', 'view_id', string='buttons', copy=True, help="这个地方的按钮主要是针对，"),
         'show_form_view': fields.many2one('mobile.view', u'展示表单', copy=True),
         'context': fields.text(u'附加值'),
     }
@@ -173,21 +174,34 @@ class MobileController(http.Controller):
 
     @http.route('/odoo/mobile', auth='public')
     def odoo_mobile(self, **kwargs):
+        """
+        odoo  手机端初始化页面
+        :param kwargs:
+        :return:
+        """
+
         template = env.get_template("index.html")
         return template.render()
 
     @http.route('/odoo/mobile/get/all/grid_data', auth='user', type='http', method=['GET'])
     def get_all_grid_data(self, **args):
+        """
+        获取配置信生成手机端的前端的视图
+        :param args:
+        :return:
+        """
+        # TODO 要用上 权限的设定等设置
         cr, context, pool = request.cr, request.context, request.registry
         uid = request.session.get('uid') or SUPERUSER_ID
         grid_obj = pool.get('mobile.grid')
         allGridData = {}
         grid_ids = grid_obj.search(cr, uid, [], context=context)
+        # 搜索所有九宫格的动作的定义（可以加用户组相关的信息)
         for grid in grid_obj.browse(cr, uid, grid_ids, context=context):
             allGridData.setdefault(grid.label_id, []).append({
                 'title': grid.title,
                 'actionId': grid.mobile_action_id.id,
-                'image': 'data:image/png;base64,' + grid.image
+                'image': 'data:image/png;base64,' + grid.image #图片信息直接读取返回前端用base64
             })
         gridList = [{'groupTitle': label.name, 'sequence': label.sequence,
                      'gridCols': 4, 'gridRow': row} for label, row in allGridData.iteritems()]
@@ -196,6 +210,12 @@ class MobileController(http.Controller):
 
     @http.route('/odoo/mobile/get/action/views', auth='user', type='http', method=['GET'])
     def get_action_views(self, **args):
+        """
+        返回对应的grid action 信息 返回odoo对应的 记录搜索的一些重要信息
+        :param args:
+        :return:
+        """
+        # todo 还需要进一步的完善很多参数没用上
         action_id = int(args.get('actionId', 0))
         cr, context, pool = request.cr, request.context, request.registry
         uid = request.session.get('uid') or SUPERUSER_ID
@@ -210,7 +230,7 @@ class MobileController(http.Controller):
             'view_id': action_row.mobile_view_id.id,
             'noForm': action_row.mobile_view_id.no_form,
             'model': action_row.model_id.model,
-            'limit': action_row.limit or 6,
+            'limit': action_row.limit or 6, # 重要，
             'offset': action_row.offset or 6,
             'order': action_row.order or 'id DESC',
             'context': action_row.mobile_view_id.context,
@@ -221,6 +241,11 @@ class MobileController(http.Controller):
 
     @http.route('/odoo/mobile/get/list/view/data', auth='user', type='http', method=['GET'])
     def get_action_form_pre_view(self, **args):
+        """
+        列表视图的显示的数据的信息
+        :param args:
+        :return:
+        """
         action_id = int(args.get('actionId', '0'))
         offset = int(args.get('offset', '0'))
         limit = int(args.get('limit', '0'))
@@ -250,6 +275,11 @@ class MobileController(http.Controller):
         return type_dict.get(type)
 
     def get_all_field_setting(self, field):
+        """
+        获取字段上对应的默认的前端可能有用的信息
+        :param field:
+        :return:
+        """
         return {
             'title': field.ir_field.field_description,
             'type': field.field_type,
@@ -263,6 +293,9 @@ class MobileController(http.Controller):
         }
 
     def get_tree_view_data(self, pool, cr, uid, view_row, record_ids, model_name, context=None):
+        """
+
+        """
         return_val = []
         all_field = []
         for field in view_row.mobile_field_ids:
@@ -292,6 +325,17 @@ class MobileController(http.Controller):
         return return_val
 
     def get_card_view_data(self, pool, cr, uid, view_row, record_ids, model_name, context=None):
+        """
+
+        :param pool:
+        :param cr:
+        :param uid:
+        :param view_row:
+        :param record_ids:
+        :param model_name:
+        :param context:
+        :return:
+        """
         return_val = []
         all_field = []
         for field in view_row.mobile_field_ids:
@@ -316,6 +360,14 @@ class MobileController(http.Controller):
         return return_val
 
     def card_show_val(self, uid, record, field, context=None):
+        """
+
+        :param uid:
+        :param record:
+        :param field:
+        :param context:
+        :return:
+        """
         return_value = {}
         if field.get('type') not in ('button', 'one2many', 'many2one'):
             return_value.update({'value': self.card_field_type_get_val(field, record, context=context)})
@@ -347,6 +399,14 @@ class MobileController(http.Controller):
         return return_value
 
     def get_show_tree_one2many(self, uid, record, field, context=None):
+        """
+        构造出 one2many手机端所需要的数据结构
+        :param uid:
+        :param record:
+        :param field:
+        :param context:
+        :return:
+        """
         all_tree_row, table_body, line_ids = [], [], []
         many_field = field.get('many_field', [])
         if not (many_field and field.get('name')):
@@ -365,6 +425,14 @@ class MobileController(http.Controller):
         return all_tree_row, line_ids
 
     def card_field_type_get_val(self, field, record, context=None):
+        """
+        展示字段信息的处理
+        :param field:
+        :param record:
+        :param context:
+        :return:
+        """
+        #TODO 进一步的完善字段的显示 添加更多的类型 或者有更多的展示的
         type = field.get('type')
         value = record[field.get('name')]
         if not value:
@@ -372,6 +440,7 @@ class MobileController(http.Controller):
         if type in ('char', 'text', 'boolean', 'integer'):
             return value
         elif type == 'many2one':
+
             if value and value.name_get():
                 name = value.name_get()
                 return [{'key': name[0][0], 'value': name[0][1]}]
@@ -388,6 +457,14 @@ class MobileController(http.Controller):
         return ''
 
     def get_record_one2many(self, uid, record, field, context=None):
+        """
+        这个是设计前期的一个方案，估计要废弃 。查看的from视图的table
+        :param uid:
+        :param record:
+        :param field:
+        :param context:
+        :return:
+        """
         table_header, table_body = [], []
         many_field = field.get('many_field', [])
         if not (many_field and field.get('name')):
@@ -404,6 +481,11 @@ class MobileController(http.Controller):
     # /odoo/button/method
     @http.route('/odoo/mobile/button/method', auth='user', type='http', method=['GET'])
     def mobile_button_method(self, **args):
+        """
+        odoo前端调用odoo自带的方法
+        :param args:
+        :return:
+        """
         cr, context, pool = request.cr, request.context, request.registry
         uid = request.session.get('uid') or SUPERUSER_ID
         model = args.get('model')
@@ -427,21 +509,49 @@ class MobileController(http.Controller):
                     return simplejson.dumps({'success': False, 'errMsg': u'%s' % exc.get('message')})
 
     def get_many_field_value(self, field):
+        """
+        many2one字段的进一步的处理
+        :param field:
+        :return:
+        """
         field_value = self.get_all_field_setting(field)
         if field.field_type == 'many2one':
             field_value.update({'model': field.ir_field.relation, 'domain': field.domain, 'options': []})
         return field_value
 
     def set_default_val(self, pool, cr, uid, field_value, default_val):
+        """
+        1。获取字段默认值，这些默认字段尽量都要配置到手机端的视图上
+        2。必须加到视图上，不然这些默认值也不会生效的。（应该是的）
+        :param pool:
+        :param cr:
+        :param uid:
+        :param field_value:
+        :param default_val:
+        :return:
+        """
+        # TODO 默认值尽量手机端页面上没有配置也要正常的写入数据库
         if default_val.get(field_value.get('name')):
             if field_value.get('type') == 'many2one':
                 options = pool.get(field_value.get('model')).name_get(cr, uid, default_val.get(field_value.get('name')), context=None)
-                return {'value': default_val.get(field_value.get('name')), 'options': [{'key': option[0], 'value':option[1]} for option in options]}
+                return {'value': default_val.get(field_value.get('name')),
+                        'options': [{'key': option[0], 'value':option[1]} for option in options]}
             else:
                 return {'value': default_val.get(field_value.get('name'))}
         return {}
     
     def get_form_view_data(self, pool, cr, uid, view_row, record_ids, model_name, context=None):
+        """
+        处理通过页面配置的form Tree 视图的
+        :param pool:
+        :param cr:
+        :param uid:
+        :param view_row:
+        :param record_ids:
+        :param model_name:
+        :param context:
+        :return:
+        """
         all_field = []
         default_val = pool.get(model_name).default_get(cr, uid, [field.ir_field.name for field
                                                                  in view_row.mobile_field_ids], context=context)
@@ -483,6 +593,11 @@ class MobileController(http.Controller):
     # /odoo/form/view/data
     @http.route('/odoo/mobile/form/view/data', auth='user', type='http', method=['GET'])
     def get_odoo_view_data(self, **args):
+        """
+        根据Grid搜索出来具体的视图配置信息
+        :param args:
+        :return:
+        """
         cr, context, pool = request.cr, request.context, request.registry
         uid = request.session.get('uid') or SUPERUSER_ID
         model_name = args.get('model', '')
@@ -496,6 +611,11 @@ class MobileController(http.Controller):
 
     @http.route('/odoo/mobile/model/name_search', auth='user', type='http', method=['GET'])
     def get_odoo_model_name_search(self, **args):
+        """
+        search 方法 简单的调用odoo的search方法起到搜索的结果
+        :param args:
+        :return:
+        """
         cr, context, pool = request.cr, request.context, request.registry
         uid = request.session.get('uid') or SUPERUSER_ID
         model_name = args.get('model')
@@ -515,6 +635,12 @@ class MobileController(http.Controller):
         return simplejson.dumps(return_val_list_dict)
 
     def construct_model_vals(self, id, vals):
+        """
+        根据前端的返回值 构造拼接 需要写入数据的val
+        :param id:
+        :param vals:
+        :return:
+        """
         dict_val = {}
         for val in vals:
             if not val.get('value'):
@@ -523,6 +649,7 @@ class MobileController(http.Controller):
                     and val.get('name') != 'id':
                 dict_val.update({val.get('name'): val.get('value')})
             elif val.get('type') in ['datetime']:
+                # TODO 这个8小时要换成可配置的，根据时区来判定。
                 date_obj = datetime.datetime.strptime(val.get('value', 0) + ':00', ISODATETIMEFORMAT)
                 dict_val.update({val.get('name'): (date_obj - relativedelta(hours=8)).strftime(ISODATETIMEFORMAT)})
             elif val.get('type') in ['integer', 'many2one']:
@@ -551,6 +678,11 @@ class MobileController(http.Controller):
 
     @http.route('/odoo/mobile/save/record', auth='user', type='json', method=['POST'])
     def create_new_record(self, **args):
+        """
+        新建修改都用这个方法，内部再进行处理
+        :param args:
+        :return:
+        """
         cr, context, pool = request.cr, request.context, request.registry
         uid = request.session.get('uid') or SUPERUSER_ID
         model = request.jsonrequest.get('model')
@@ -561,12 +693,17 @@ class MobileController(http.Controller):
         try:
             if not id:
                 vals.update(context_val.get('default_vals', {}))
-                pool.get(model).create(cr, uid, vals, context=context)
-                return {'success': True, 'errMsg': u'创建成功！'}
+                if pool.get(model).create(cr, uid, vals, context=context):
+                    return {'success': True, 'errMsg': u'创建成功！'}
+                else:
+                    return {'success': False, 'errMsg': u'创建失败！'}
             else:
-                pool.get(model).write(cr, uid, id, vals, context=context)
-                return {'success': True, 'errMsg': u'修改成功！'}
+                if pool.get(model).write(cr, uid, id, vals, context=context):
+                    return {'success': True, 'errMsg': u'修改成功！'}
+                else:
+                    return {'success': False, 'errMsg': u'修改失败！'}
         except Exception as exc:
+            # TODO odoo 返回的错误返回值不太固定，偶尔会有拦截不到的情况，还需进一步探索
             if isinstance(exc, basestring):
                 return {'success': False, 'errMsg': u'%s' % exc}
             if exc and hasattr(exc, 'value'):
@@ -578,6 +715,12 @@ class MobileController(http.Controller):
 
     @http.route('/odoo/mobile/login', auth='public', type='json', method=['POST'])
     def login_mobile(self, **kwargs):
+        """
+        简单的登录系统
+        :param kwargs:
+        :return:
+        """
+        # TODO 系统登录 这个还有点问题，当seesion过期，odoo会自动跳转到odoo的链接，AJAX请求无法捕获这个重定向 。
         name = request.jsonrequest.get('name')
         password = request.jsonrequest.get('password')
         ensure_db()
