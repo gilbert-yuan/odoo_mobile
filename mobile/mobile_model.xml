@@ -12,6 +12,7 @@
                     <field name='sequence'/>
                     <field name='image'/>
                     <field name='title' />
+                    <field name='group_ids' widget="many2many_tags"/>
                 </tree>
             </field>
         </record>
@@ -96,6 +97,7 @@
                         <field name='is_show_edit_form' />
                         <field name='is_show_form_tree' />
                         <field name='many_field' />
+                        <field name='group_ids' widget="many2many_tags"/>
                     </group>
                 </form>
             </field>
@@ -169,6 +171,7 @@
                     <field name='domain' />
                     <field name='sequence'/>
                     <field name='name' />
+                    <field name='group_ids' widget="many2many_tags"/>
                 </tree>
             </field>
         </record>

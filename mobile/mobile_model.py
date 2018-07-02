@@ -83,7 +83,7 @@ class MobileView(osv.osv):
         'no_form': True
     }
 
-    _sql_constraints =[
+    _sql_constraints = [
         ('model_mobile_action_id_field_id_uniq', 'unique (mobile_action_id)', u'一个动作只能对应一个主视图'),
     ]
 
@@ -102,8 +102,28 @@ class MobileDomain(osv.osv):
         'view_id': fields.many2one('mobile.view', string='view', copy=True),
         'domain': fields.char(u'domain', copy=True),
         'sequence': fields.integer(u'顺序', copy=True),
+        'group_ids': fields.many2many('res.groups', 'domain_groups_rel', 'domain_id', 'group_id', string='用户组'),
+        'user_ids': fields.many2many('res.users', 'domain_group_user_rel', 'user_id', 'group_id', string='用户信息'),
         'name': fields.char(u'名称', copy=True)
     }
+
+    def create(self, cr, uid, vals, context=None):
+        return_val = super(MobileDomain, self).create(cr, uid, vals, context=context)
+        if vals.get('group_ids'):
+            for grid in self.browse(cr, uid, return_val, context=context):
+                user_ids = [user.id for group in grid.group_ids for user in group.users]
+                self.write(cr, uid, return_val, {'user_ids': [(6, 0, user_ids)]}, context=context)
+                return return_val
+        return return_val
+
+    def write(self, cr, uid, ids, vals, context=None):
+        return_val = super(MobileDomain, self).write(cr, uid, ids, vals, context=context)
+        if vals.get('group_ids'):
+             for grid in self.browse(cr, uid, ids, context=context):
+                user_ids = [user.id for group in grid.group_ids for user in group.users]
+                self.write(cr, uid, ids, {'user_ids': [(6, 0, user_ids)]}, context=context)
+                return return_val
+        return return_val
 
 
 class MobileButton(osv.osv):
@@ -113,17 +133,38 @@ class MobileButton(osv.osv):
         'button_method': fields.char(u'方法名', copy=True),
         'show_condition': fields.char(u'显示前提', copy=True),
         'view_id': fields.many2one('mobile.view', string=u'视图', copy=True),
-        'group_ids': fields.many2many('res.groups', 'button_groups_rel', 'button_id', 'group_id', string='用户组')
+        'group_ids': fields.many2many('res.groups', 'button_groups_rel', 'button_id', 'group_id', string='用户组'),
+        'user_ids': fields.many2many('res.users', 'domain_group_user_rel', 'user_id', 'group_id', string='用户信息'),
     }
     _defaults = {
         'show_condition': []
     }
+
+    def create(self, cr, uid, vals, context=None):
+        return_val = super(MobileButton, self).create(cr, uid, vals, context=context)
+        if vals.get('group_ids'):
+            for grid in self.browse(cr, uid, return_val, context=context):
+                user_ids = [user.id for group in grid.group_ids for user in group.users]
+                self.write(cr, uid, return_val, {'user_ids': [(6, 0, user_ids)]}, context=context)
+                return return_val
+        return return_val
+
+    def write(self, cr, uid, ids, vals, context=None):
+        return_val = super(MobileButton, self).write(cr, uid, ids, vals, context=context)
+        if vals.get('group_ids'):
+             for grid in self.browse(cr, uid, ids, context=context):
+                user_ids = [user.id for group in grid.group_ids for user in group.users]
+                self.write(cr, uid, ids, {'user_ids': [(6, 0, user_ids)]}, context=context)
+                return return_val
+        return return_val
 
 
 class MobileField(osv.osv):
     _name = 'mobile.field'
     _order = 'sequence'
     _columns = {
+        'group_ids': fields.many2many('res.groups', 'field_groups_rel', 'button_id', 'group_id', string='用户组'),
+        'user_ids': fields.many2many('res.users', 'field_group_user_rel', 'user_id', 'group_id', string='用户信息'),
         'sequence': fields.integer(u'序列'),
         'view_id': fields.many2one('mobile.view', u'视图ID', copy=True),
         'ir_field': fields.many2one('ir.model.fields', u'字段', copy=True),
@@ -142,6 +183,24 @@ class MobileField(osv.osv):
         'many_field': fields.one2many('mobile.field', 'field_id', string='one2many', copy=True)
     }
 
+    def create(self, cr, uid, vals, context=None):
+        return_val = super(MobileField, self).create(cr, uid, vals, context=context)
+        if vals.get('group_ids'):
+            for grid in self.browse(cr, uid, return_val, context=context):
+                user_ids = [user.id for group in grid.group_ids for user in group.users]
+                self.write(cr, uid, return_val, {'user_ids': [(6, 0, user_ids)]}, context=context)
+                return return_val
+        return return_val
+
+    def write(self, cr, uid, ids, vals, context=None):
+        return_val = super(MobileField, self).write(cr, uid, ids, vals, context=context)
+        if vals.get('group_ids'):
+             for grid in self.browse(cr, uid, ids, context=context):
+                user_ids = [user.id for group in grid.group_ids for user in group.users]
+                self.write(cr, uid, ids, {'user_ids': [(6, 0, user_ids)]}, context=context)
+                return return_val
+        return return_val
+
 
 class MobileGrid(osv.osv):
     _name = 'mobile.grid'
@@ -156,12 +215,32 @@ class MobileGrid(osv.osv):
         return res
 
     _columns = {
-        'label_id': fields.many2one('mobile.grid.label', u'分类'),
+        'label_id': fields.many2one('mobile.grid.label', u'分类', required=True),
         'sequence': fields.related('label_id', 'sequence', type='integer', string=u'顺序', readonly=True),
-        'image': fields.binary(u'图片'),
+        'image': fields.binary(u'图片', required=True),
         'mobile_action_id': fields.function(_compute_mobile_action_id, type='many2one', relation='mobile.action', string=u'动作'),
-        'title': fields.char(u'名称')
+        'title': fields.char(u'名称', required=True),
+        'group_ids': fields.many2many('res.groups', 'mobile_groups_rel', 'grid_id', 'group_id', string='用户组'),
+        'user_ids': fields.many2many('res.users', 'mobile_group_user_rel', 'user_id', 'group_id', string='用户信息'),
     }
+
+    def create(self, cr, uid, vals, context=None):
+        return_val = super(MobileGrid, self).create(cr, uid, vals, context=context)
+        if vals.get('group_ids'):
+            for grid in self.browse(cr, uid, return_val, context=context):
+                user_ids = [user.id for group in grid.group_ids for user in group.users]
+                self.write(cr, uid, return_val, {'user_ids': [(6, 0, user_ids)]}, context=context)
+                return return_val
+        return return_val
+
+    def write(self, cr, uid, ids, vals, context=None):
+        return_val = super(MobileGrid, self).write(cr, uid, ids, vals, context=context)
+        if vals.get('group_ids'):
+             for grid in self.browse(cr, uid, ids, context=context):
+                user_ids = [user.id for group in grid.group_ids for user in group.users]
+                self.write(cr, uid, ids, {'user_ids': [(6, 0, user_ids)]}, context=context)
+                return return_val
+        return return_val
 
 
 view_type = {
@@ -195,7 +274,7 @@ class MobileController(http.Controller):
         uid = request.session.get('uid') or SUPERUSER_ID
         grid_obj = pool.get('mobile.grid')
         allGridData = {}
-        grid_ids = grid_obj.search(cr, uid, [], context=context)
+        grid_ids = grid_obj.search(cr, uid, ['|', ('user_ids', 'in', uid), ('user_ids', '=', False)], context=context)
         # 搜索所有九宫格的动作的定义（可以加用户组相关的信息)
         for grid in grid_obj.browse(cr, uid, grid_ids, context=context):
             allGridData.setdefault(grid.label_id, []).append({
@@ -222,7 +301,8 @@ class MobileController(http.Controller):
         action_row = pool.get('mobile.action').browse(cr, uid, action_id, context=context)
         views_data = [{'title': domain.name,
                        'sequence': domain.sequence,
-                       'domain': domain.domain} for domain in action_row.mobile_view_id.domain_ids]
+                       'domain': domain.domain} for domain in action_row.mobile_view_id.domain_ids
+                      if not domain.user_ids or uid in [user.id for user in domain.user_ids] and domain.user_ids]
         sorted(views_data, key=lambda view: view.get('sequence'))
         return_val = {
             'title': action_row.name,
@@ -246,9 +326,12 @@ class MobileController(http.Controller):
         :param args:
         :return:
         """
+        cr, context, pool = request.cr, request.context, request.registry
         action_id = int(args.get('actionId', '0'))
         offset = int(args.get('offset', '0'))
         limit = int(args.get('limit', '0'))
+        uid = request.session.get('uid') or SUPERUSER_ID
+        user = pool.get('res.users').browse(cr, uid, uid, context=context)
         order = args.get('order', 'id DESC')
         domain = eval(args.get('domain', '[]'))
         view_id = int(args.get('view_id', '0'))
@@ -257,8 +340,6 @@ class MobileController(http.Controller):
         model_name = args.get('model')
         if not model_name:
             return simplejson.dumps({})
-        cr, context, pool = request.cr, request.context, request.registry
-        uid = request.session.get('uid') or SUPERUSER_ID
         record_ids = pool.get(model_name).search(cr, uid, domain, offset=offset, limit=limit, order=order, context=context)
         return_val = []
         for view_row in pool.get('mobile.view').browse(cr, uid, view_id, context=context):
@@ -294,27 +375,31 @@ class MobileController(http.Controller):
 
     def get_tree_view_data(self, pool, cr, uid, view_row, record_ids, model_name, context=None):
         """
-
+        button 的显示的domain 可以添加参数 ，可以添加 user 及相关的信息作为条件
         """
         return_val = []
         all_field = []
         for field in view_row.mobile_field_ids:
+            if field.user_ids and uid not in [field_user.id for field_user in field.user_ids]:
+                continue
             all_field.append(self.get_all_field_setting(field))
+        user_row = pool.get('res.users').browse(cr, uid, uid, context=context)
         for button in view_row.button_ids:
+            user = user_row
             domain = eval(button.show_condition or '[]') + [('id', 'in', record_ids)]
             mode_ids = pool.get(model_name).search(cr, uid, domain, context=context)
+            if button.user_ids and user.id not in [button_user.id for button_user in button.user_ids]:
+                continue
             all_field.append({
                 'title': button.name,
                 'type': 'button',
                 'value': button.button_method,
-                'user_ids': [user.id for group in button.group_ids for user in group.users],
                 'model': model_name,
                 'ids': mode_ids,
-                'invisible': button.show_condition
-            })
+             })
         for record in pool.get(model_name).browse(cr, uid, record_ids, context=context):
             new_fields = copy.deepcopy(all_field)
-            [field.update(self.card_show_val( uid,  record, field, context=context))
+            [field.update(self.card_show_val(uid,  record, field, context=context))
              for field in new_fields]
             tree_val = {
                 'title': record['display_name'],
@@ -339,15 +424,20 @@ class MobileController(http.Controller):
         return_val = []
         all_field = []
         for field in view_row.mobile_field_ids:
+            if field.user_ids and uid not in [field_user.id for field_user in field.user_ids]:
+                continue
             all_field.append(self.get_all_field_setting(field))
+        user_row = pool.get('res.users').browse(cr, uid, uid, context=context)
         for button in view_row.button_ids:
+            user = user_row
             domain = eval(button.show_condition or '[]') + [('id', 'in', record_ids)]
             mode_ids = pool.get(model_name).search(cr, uid, domain, context=context)
+            if button.user_ids and user.id not in [button_user.id for button_user in button.user_ids]:
+                continue
             all_field.append({
                 'title': button.name,
                 'type': 'button',
                 'value': button.button_method,
-                'user_ids': [user.id for group in button.group_ids for user in group.users],
                 'model': model_name,
                 'ids': mode_ids,
                 'invisible': button.show_condition
@@ -381,7 +471,7 @@ class MobileController(http.Controller):
                                  'value': options and options[0] and options[0].get('key')})
         elif field.get('type') == 'button':
             return_value.update(
-                {'invisible': False if record['id'] in field.get('ids') and len(field.get('user_ids', [])) else True})
+                {'invisible': False if record['id'] in field.get('ids') else True})
         elif field.get('type') == 'one2many':
             value, ids = self.get_show_tree_one2many(uid, record, field, context=context)
             return_value.update({'value': value,
