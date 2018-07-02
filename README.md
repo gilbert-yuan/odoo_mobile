@@ -1,5 +1,5 @@
 # odoo_mobile
-vux 实现对接odoo 配置出手机端
+vux 实现对接odoo 配置出手机端 （VUX 前端对应项目 https://github.com/gilbert-yuan/odoo_mobile_test 修改后只要把对应打包好的js 和css 替换目前项目就可以了）
 1. 安装模块
   找到对应的版本安装模块
     
