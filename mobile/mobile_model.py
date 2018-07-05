@@ -1,4 +1,3 @@
-# coding=utf-8
 # -*- coding: utf-8 -*-
 import jinja2, sys, os
 import simplejson, openerp
@@ -6,13 +5,18 @@ from openerp.addons.web.controllers.main import ensure_db
 from openerp import http
 from openerp.http import request
 from openerp.osv import fields, osv
-import copy, datetime
+import copy
+import datetime
+from openerp.tools import float_round
+from odoo_pyechart import Bar, Pie, Line, Scatter, Style
+import tempfile
+import os
 from dateutil.relativedelta import relativedelta
 ISODATEFORMAT = '%Y-%m-%d'
 ISODATETIMEFORMAT = "%Y-%m-%d %H:%M:%S"
 MOBILEDATETIMEFORMAT = "%Y-%m-%d %H:%M"
 SUPERUSER_ID = 1
-from openerp.tools import float_round
+
 
 if hasattr(sys, 'frozen'):
     # When running on compiled windows binary, we don't have access to package loader.
@@ -72,7 +76,7 @@ class MobileView(osv.osv):
         'no_form': fields.boolean(u'不显示form', help="视图类型是card的，不推荐再次显示form"),
         'model_id': fields.many2one('ir.model', u'模型名称', copy=True),
         'domain_ids': fields.one2many('mobile.domain', 'view_id', string="domain", copy=True),
-        'view_type': fields.selection([('tree', u'列表视图'), ('card', u'看板'),
+        'view_type': fields.selection([('tree', u'列表视图'), ('card', u'看板'), ('bar', '条形图'), ('pie', '饼状图'),
                                        ('view_form', u'表单'), ('edit_form', '编辑表单')], u'view type',
                                       help="", copy=True),
         'button_ids': fields.one2many('mobile.button', 'view_id', string='buttons', copy=True, help="这个地方的按钮主要是针对，"),
@@ -243,9 +247,169 @@ class MobileGrid(osv.osv):
         return return_val
 
 
+class GraphViewOverView(osv.osv):
+    _name = 'graph.view.over.view'
+
+    def get_pie_style(self, base_style, view_row):
+        return dict(base_style, **dict(radius=eval(view_row['radius']),
+                                       center=eval(view_row['center']),
+                                       is_random=view_row['is_random'],
+                                       rosetype=view_row['rosetype'] or '',
+                                      ))
+
+    def get_line_style(self, base_style, view_row):
+        return dict(base_style, **dict(mark_line=eval(view_row['mark_line'] or '[]'),
+                                       is_smooth=view_row['is_smooth'],
+                                       is_fill=view_row['is_fill'],
+                                       line_opacity=view_row['line_opacity'],
+                                       area_opacity=view_row['area_opacity'],
+                                       symbol=view_row['symbol'],
+                                       symbol_size=view_row['symbol_size'],
+                                       mark_point=eval(view_row['mark_point'] or  '[]'),
+                                       is_step=view_row['is_step'],
+                                       mark_point_symbol=view_row['mark_point_symbol'],
+                                       mark_point_textcolor=view_row['mark_point_textcolor'],
+                                       ))
+
+    def get_line_style(self, base_style, view_row):
+        return dict(base_style, **dict(mark_point=eval(view_row['mark_point'] or '[]'),
+                                       bar_category_gap=view_row['bar_category_gap'],
+                                       mark_line=eval(view_row['mark_line'] or '[]'),
+                                       is_datazoom_show=view_row['is_datazoom_show'],
+                                       datazoom_type=view_row['datazoom_type'],
+                                       datazoom_range=view_row['datazoom_range'],
+                                       ))
+
+    def get_graph_type_style(self, view_row):
+        type_style = Style()
+        base_style = type_style.add(title_pos=view_row['title_pos'] or '',
+                                    width=view_row['width'] or '',
+                                    height=view_row['height'] or '',
+                                    is_label_show=view_row['is_label_show'] or '',
+                                    label_pos=view_row['label_pos'] or '',
+                                    legend_top=view_row['legend_top'] or '',
+                                    is_convert=view_row['is_convert'] or '',
+                                    label_text_color=view_row['label_text_color'] or ''
+                                    )
+        style_dict = {
+            'pie': self.get_pie_style(base_style, view_row),
+            'bar': self.get_bar_style(base_style, view_row),
+            'line': self.get_line_style(base_style, view_row)
+        }
+        return style_dict.get(view_row.view_type)
+
+    def _get_graph_view_html(self, cr, uid, ids, name, args, context=None):
+        res = {}
+        for view in self.browse(cr, uid, ids, context=context):
+            res[view.id] = ''
+            tempfd, tempname = tempfile.mkstemp('.html')
+            groupby = eval(view.groupby)
+            fields = eval(view.fields)
+            result = self.pool.get(view.model_name).read_group(cr, uid, eval(view.domain), fields=fields,
+                                                      groupby=groupby, orderby=view.orderby,
+                                                      limit=eval(view.limit), context=eval(view.context))
+            GraphType = graph_type.get(view.view_type)
+            GraphTypeStyle = self.get_graph_type_style(view)
+            graph = GraphType('')
+            attr, v1 = [], []
+            fields.remove(groupby[0])
+            for record_dict in result:
+                if isinstance(record_dict.get(groupby[0]), str):
+                    attr.append(record_dict.get(groupby[0]))
+                elif isinstance(record_dict.get(groupby[0]), tuple):
+                    attr.append(record_dict.get(groupby[0])[1])
+                if fields[0] in record_dict:
+                    v1.append(record_dict.get(fields[0]))
+            graph.add(u"商家A", attr, v1, **GraphTypeStyle)
+            graph.render(path=tempname)
+            with open(tempname, 'r') as graph_file:
+                res[view.id] = graph_file.read()
+            os.unlink(tempname)
+        return res
+
+    _columns = {
+        'view_title': fields.char(u'视图的标题'),
+        'view_type': fields.selection([('line', '折线图'),
+                                       ('pie', '饼状图'),
+                                       ('bar', '条形图'),
+                                       ('scatter', '散点图')], string='视图类型'),
+        'model_name': fields.char('模型'),
+        'domain': fields.char('Domain'),
+        'fields': fields.char('Fields'),
+        'groupby': fields.char('GroupBy'),
+        'orderby': fields.char("OrderBy"),
+        'limit': fields.char("limit"),
+        'context': fields.char("context"),
+        'html': fields.function(_get_graph_view_html, type='text', string='视图总览'),
+        # graph options
+        'is_label_show': fields.boolean('is_label_show'),
+        'is_stack': fields.boolean('is_stack'),
+        'is_toolbox_show': fields.boolean('is_toolbox_show'),
+        'title_pos': fields.char('title_pos'),
+        'width': fields.float('width'),
+        'height': fields.float('height'),
+        'center': fields.char('center'),
+        'radius': fields.char('radius'),
+        'mark_point_symbol': fields.char('mark_point_symbol'),
+        'symbol': fields.char('symbol'),
+        'legend_top': fields.char('legend_top'),
+        'label_pos': fields.char('label_pos'),
+        'mark_point_textcolor': fields.char('mark_point_textcolor'),
+        'bar_category_gap': fields.integer('bar_category_gap'),
+        'symbol_size': fields.integer('symbol_size'),
+        'line_opacity': fields.integer('line_opacity'),
+        'area_opacity': fields.integer('area_opacity'),
+        'is_convert': fields.boolean('is_convert'),
+        'is_datazoom_show': fields.boolean('is_datazoom_show'),
+        'mark_point': fields.char('mark_point', help='["average"]'),
+        'mark_line': fields.char('mark_line', help='["min", "max"]'),
+        'label_text_color': fields.char('label_text_color'),
+        'is_random': fields.boolean('is_random'),
+        'is_smooth': fields.boolean('is_smooth'),
+        'datazoom_type': fields.boolean('datazoom_type', help="slider"),
+        'is_fill': fields.boolean('is_fill', help="is_fill"),
+        'is_step': fields.boolean('is_step', help="is_step"),
+        'datazoom_range': fields.char('datazoom_range', help="[10, 25]"),
+        'rosetype': fields.selection([('radius', 'radius'), ('area', 'area')], 'rosetype'),
+        'legend_orient': fields.selection([('vertical', 'vertical'), ('horizontal', 'horizontal')], 'legend_orient'),
+    }
+
+    _defaults = {
+        'domain': '[]',
+        'fields': '[]',
+        'groupby': '[]',
+        'radius': '[]',
+        'rosetype': 'area',
+        'center': '[]',
+        'orderby': 'id DESC',
+        'limit': '10',
+        'context': '{}',
+        'is_label_show': True,
+        'is_toolbox_show': True,
+        'is_convert': True,
+        'is_datazoom_show': True,
+        'datazoom_type': 'slider',
+        'datazoom_range': '[10, 25]',
+        'title_pos': '',
+        'rosetype': 'radius',
+        'legend_orient': 'horizontal',
+        'width': 400,
+        'height': 300,
+        'center': '',
+        'radius': "[]",
+    }
+
+graph_type ={
+    'bar': Bar,
+    'pie': Pie,
+    'line': Line,
+    'scatter': Scatter,
+}
+
 view_type = {
     'tree': 'Tree',
-    'card': 'OdooCard'
+    'card': 'OdooCard',
+    'bar': 'OdooCard'
 }
 
 
@@ -351,9 +515,19 @@ class MobileController(http.Controller):
     def get_view_type_function(self, type):
         type_dict = {
             'card': self.get_card_view_data,
-            'tree': self.get_tree_view_data
+            'tree': self.get_tree_view_data,
+            'bar': self.get_bar_view_data,
         }
         return type_dict.get(type)
+
+    def get_bar_view_data(self, pool, cr, uid, view_row, record_ids, model_name, context=None):
+        attr = ["衬衫", "羊毛衫", "雪纺衫", "裤子", "高跟鞋", "袜子"]
+        v1 = [5, 20, 36, 10, 75, 90]
+        v2 = [10, 25, 8, 60, 20, 80]
+        bar = Bar(u"柱状图数据堆叠示例")
+        bar.add(u"商家A", attr, v1, is_stack=True)
+        bar.add(u"商家B", attr, v2, is_stack=True)
+        bar.render(path='gri3d.png')
 
     def get_all_field_setting(self, field):
         """
@@ -423,6 +597,7 @@ class MobileController(http.Controller):
         """
         return_val = []
         all_field = []
+        all_groups = self.pool.get('res.users').read(cr, uid, [uid], ['groups_id'], context=context)[0]['groups_id']
         for field in view_row.mobile_field_ids:
             if field.user_ids and uid not in [field_user.id for field_user in field.user_ids]:
                 continue
@@ -432,7 +607,7 @@ class MobileController(http.Controller):
             user = user_row
             domain = eval(button.show_condition or '[]') + [('id', 'in', record_ids)]
             mode_ids = pool.get(model_name).search(cr, uid, domain, context=context)
-            if button.user_ids and user.id not in [button_user.id for button_user in button.user_ids]:
+            if len([group.id for group in button.groups if group.id in all_groups]) > 0:
                 continue
             all_field.append({
                 'title': button.name,
@@ -645,6 +820,7 @@ class MobileController(http.Controller):
         all_field = []
         default_val = pool.get(model_name).default_get(cr, uid, [field.ir_field.name for field
                                                                  in view_row.mobile_field_ids], context=context)
+        all_groups = self.pool.get('res.users').read(cr, uid, [uid], ['groups_id'], context=context)[0]['groups_id']
         for field in view_row.mobile_field_ids:
             field_value = self.get_all_field_setting(field)
             if field.field_type == 'many2one':
@@ -667,7 +843,7 @@ class MobileController(http.Controller):
                 'title': button.name,
                 'type': 'button',
                 'value': button.button_method,
-                'user_ids': [True for group in button.group_ids if uid in [user.id for user in group.users]],
+                'user_ids': [True for group in button.group_ids if group.id in all_groups],
                 'model': model_name,
                 'ids': mode_ids,
                 'invisible': button.show_condition
