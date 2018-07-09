@@ -271,7 +271,7 @@ class GraphViewOverView(osv.osv):
                                        mark_point_textcolor=view_row['mark_point_textcolor'],
                                        ))
 
-    def get_line_style(self, base_style, view_row):
+    def get_bar_style(self, base_style, view_row):
         return dict(base_style, **dict(mark_point=eval(view_row['mark_point'] or '[]'),
                                        bar_category_gap=view_row['bar_category_gap'],
                                        mark_line=eval(view_row['mark_line'] or '[]'),
@@ -597,7 +597,7 @@ class MobileController(http.Controller):
         """
         return_val = []
         all_field = []
-        all_groups = self.pool.get('res.users').read(cr, uid, [uid], ['groups_id'], context=context)[0]['groups_id']
+        all_groups = pool.get('res.users').read(cr, uid, [uid], ['groups_id'], context=context)[0]['groups_id']
         for field in view_row.mobile_field_ids:
             if field.user_ids and uid not in [field_user.id for field_user in field.user_ids]:
                 continue
@@ -820,7 +820,7 @@ class MobileController(http.Controller):
         all_field = []
         default_val = pool.get(model_name).default_get(cr, uid, [field.ir_field.name for field
                                                                  in view_row.mobile_field_ids], context=context)
-        all_groups = self.pool.get('res.users').read(cr, uid, [uid], ['groups_id'], context=context)[0]['groups_id']
+        all_groups = pool.get('res.users').read(cr, uid, [uid], ['groups_id'], context=context)[0]['groups_id']
         for field in view_row.mobile_field_ids:
             field_value = self.get_all_field_setting(field)
             if field.field_type == 'many2one':
