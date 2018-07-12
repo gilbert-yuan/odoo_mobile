@@ -8,7 +8,7 @@ from openerp.osv import fields, osv
 import copy
 import datetime
 from openerp.tools import float_round
-#from odoo_pyechart import Bar, Pie, Line, Scatter, Style
+from odoo_pyechart import Bar, Pie, Line, Scatter, Style
 import tempfile
 import os
 from dateutil.relativedelta import relativedelta
@@ -400,10 +400,10 @@ class GraphViewOverView(osv.osv):
     }
 
 graph_type ={
-    # 'bar': Bar,
-    # 'pie': Pie,
-    # 'line': Line,
-    # 'scatter': Scatter,
+    'bar': Bar,
+    'pie': Pie,
+    'line': Line,
+    'scatter': Scatter,
 }
 
 view_type = {
@@ -520,14 +520,14 @@ class MobileController(http.Controller):
         }
         return type_dict.get(type)
 
-    def get_bar_view_data(self, pool, cr, uid, view_row, record_ids, model_name, context=None):
-        attr = ["衬衫", "羊毛衫", "雪纺衫", "裤子", "高跟鞋", "袜子"]
-        v1 = [5, 20, 36, 10, 75, 90]
-        v2 = [10, 25, 8, 60, 20, 80]
-        bar = Bar(u"柱状图数据堆叠示例")
-        bar.add(u"商家A", attr, v1, is_stack=True)
-        bar.add(u"商家B", attr, v2, is_stack=True)
-        bar.render(path='gri3d.png')
+    # def get_bar_view_data(self, pool, cr, uid, view_row, record_ids, model_name, context=None):
+    #     attr = ["衬衫", "羊毛衫", "雪纺衫", "裤子", "高跟鞋", "袜子"]
+    #     v1 = [5, 20, 36, 10, 75, 90]
+    #     v2 = [10, 25, 8, 60, 20, 80]
+    #     bar = Bar(u"柱状图数据堆叠示例")
+    #     bar.add(u"商家A", attr, v1, is_stack=True)
+    #     bar.add(u"商家B", attr, v2, is_stack=True)
+    #     bar.render(path='gri3d.png')
 
     def get_all_field_setting(self, field):
         """
