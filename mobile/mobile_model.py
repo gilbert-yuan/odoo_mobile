@@ -650,7 +650,7 @@ class MobileController(http.Controller):
         elif field.get('type') == 'many2many':
             options = self.card_field_type_get_val(field, record, context=context)
             return_value.update({'options': self.card_field_type_get_val(field, record, context=context),
-                                 'value': options and options[0] and options[0].get('key')
+                                 'value': options and options[0] and options[0].get('key'),
                                  'domain': eval(field.get('domain') or '[]')
                                  })
         elif field.get('type') == 'button':
