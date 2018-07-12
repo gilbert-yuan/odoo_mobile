@@ -8,7 +8,7 @@ from openerp.osv import fields, osv
 import copy
 import datetime
 from openerp.tools import float_round
-from odoo_pyechart import Bar, Pie, Line, Scatter, Style
+#from odoo_pyechart import Bar, Pie, Line, Scatter, Style
 import tempfile
 import os
 from dateutil.relativedelta import relativedelta
@@ -178,9 +178,9 @@ class MobileField(osv.osv):
         'field_selection': fields.related('ir_field', 'selection', type='char', string=u'选择项目', readonly=True,
                                           copy=True),
         'model_id': fields.many2one('ir.model', string=u'类型', copy=True),
-        'required': fields.boolean(u'必输', copy=True),
-        'readonly': fields.boolean(u'只读', copy=True),
-        'invisible': fields.boolean(u'不可见', copy=True),
+        'required': fields.char(u'必输', copy=True),
+        'readonly': fields.char(u'只读', copy=True),
+        'invisible': fields.char(u'不可见', copy=True),
         'is_show_edit_form': fields.boolean(u'form不可见', copy=True),
         'is_show_form_tree': fields.boolean(u'tree不可见', copy=True),
         'field_id': fields.many2one('mobile.field', 'field_id', copy=True),
@@ -400,10 +400,10 @@ class GraphViewOverView(osv.osv):
     }
 
 graph_type ={
-    'bar': Bar,
-    'pie': Pie,
-    'line': Line,
-    'scatter': Scatter,
+    # 'bar': Bar,
+    # 'pie': Pie,
+    # 'line': Line,
+    # 'scatter': Scatter,
 }
 
 view_type = {
@@ -541,6 +541,7 @@ class MobileController(http.Controller):
             'is_show_edit_form': field.is_show_edit_form,
             'is_show_form_tree': field.is_show_form_tree,
             'value': '',
+            'domain': False,
             'required': field.required,
             'readonly': field.readonly,
             'invisible': field.invisible,
@@ -557,9 +558,8 @@ class MobileController(http.Controller):
             if field.user_ids and uid not in [field_user.id for field_user in field.user_ids]:
                 continue
             all_field.append(self.get_all_field_setting(field))
-        user_row = pool.get('res.users').browse(cr, uid, uid, context=context)
+        user = pool.get('res.users').browse(cr, uid, uid, context=context)
         for button in view_row.button_ids:
-            user = user_row
             domain = eval(button.show_condition or '[]') + [('id', 'in', record_ids)]
             mode_ids = pool.get(model_name).search(cr, uid, domain, context=context)
             if button.user_ids and user.id not in [button_user.id for button_user in button.user_ids]:
@@ -573,7 +573,7 @@ class MobileController(http.Controller):
              })
         for record in pool.get(model_name).browse(cr, uid, record_ids, context=context):
             new_fields = copy.deepcopy(all_field)
-            [field.update(self.card_show_val(uid,  record, field, context=context))
+            [field.update(self.card_show_val(uid,  record, field, context=context, user=user))
              for field in new_fields]
             tree_val = {
                 'title': record['display_name'],
@@ -602,12 +602,11 @@ class MobileController(http.Controller):
             if field.user_ids and uid not in [field_user.id for field_user in field.user_ids]:
                 continue
             all_field.append(self.get_all_field_setting(field))
-        user_row = pool.get('res.users').browse(cr, uid, uid, context=context)
+        user = pool.get('res.users').browse(cr, uid, uid, context=context)
         for button in view_row.button_ids:
-            user = user_row
             domain = eval(button.show_condition or '[]') + [('id', 'in', record_ids)]
             mode_ids = pool.get(model_name).search(cr, uid, domain, context=context)
-            if len([group.id for group in button.groups if group.id in all_groups]) > 0:
+            if len([group.id for group in button.group_ids if group.id in all_groups]) > 0:
                 continue
             all_field.append({
                 'title': button.name,
@@ -619,14 +618,14 @@ class MobileController(http.Controller):
             })
         for record in pool.get(model_name).browse(cr, uid, record_ids, context=context):
             new_fields = copy.deepcopy(all_field)
-            [field.update(self.card_show_val(uid, record, field, context=context))
+            [field.update(self.card_show_val(uid, record, field, context=context, user=user))
              for field in new_fields]
+
             return_val.append({'fieldVals': new_fields, 'id': record.id})
         return return_val
 
-    def card_show_val(self, uid, record, field, context=None):
+    def card_show_val(self, uid, record, field, context=None, user=None):
         """
-
         :param uid:
         :param record:
         :param field:
@@ -634,25 +633,35 @@ class MobileController(http.Controller):
         :return:
         """
         return_value = {}
+        if field.get('type') != 'button':
+            return_value.update({
+                'invisible': eval(field.get('invisible') or 'False'),
+                'readonly': eval(field.get('readonly') or 'False'),
+                'required': eval(field.get('required') or 'False'),
+            })
         if field.get('type') not in ('button', 'one2many', 'many2one'):
             return_value.update({'value': self.card_field_type_get_val(field, record, context=context)})
         elif field.get('type') == 'many2one':
             options = self.card_field_type_get_val(field, record, context=context)
             return_value.update({'options': self.card_field_type_get_val(field, record, context=context),
-                                 'value': options and options[0] and options[0].get('key')})
+                                 'value': options and options[0] and options[0].get('key'),
+                                 'domain': eval(field.get('domain') or '[]')
+                                 })
         elif field.get('type') == 'many2many':
             options = self.card_field_type_get_val(field, record, context=context)
             return_value.update({'options': self.card_field_type_get_val(field, record, context=context),
-                                 'value': options and options[0] and options[0].get('key')})
+                                 'value': options and options[0] and options[0].get('key')
+                                 'domain': eval(field.get('domain') or '[]')
+                                 })
         elif field.get('type') == 'button':
             return_value.update(
                 {'invisible': False if record['id'] in field.get('ids') else True})
         elif field.get('type') == 'one2many':
-            value, ids = self.get_show_tree_one2many(uid, record, field, context=context)
+            value, ids = self.get_show_tree_one2many(uid, record, field, context=context, user=user)
             return_value.update({'value': value,
                                  'ids': ids,
                                  'table': self.get_record_one2many(uid, record, field,
-                                                                   context=dict(context, **{'table': True}))
+                                                                   context=dict(context, **{'table': True}), user=user)
                                  })
         elif field.get('type') == 'selection':
             value = self.card_field_type_get_val(record, field, context=context)
@@ -663,7 +672,7 @@ class MobileController(http.Controller):
 
         return return_value
 
-    def get_show_tree_one2many(self, uid, record, field, context=None):
+    def get_show_tree_one2many(self, uid, record, field, context=None,user=None):
         """
         构造出 one2many手机端所需要的数据结构
         :param uid:
@@ -674,12 +683,13 @@ class MobileController(http.Controller):
         """
         all_tree_row, table_body, line_ids = [], [], []
         many_field = field.get('many_field', [])
+
         if not (many_field and field.get('name')):
             return '', ''
         for line in record[field.get('name')]:
             line_ids.append(line['id'])
             new_fields = copy.deepcopy(many_field)
-            [field.update(self.card_show_val(uid,  line, field, context=dict(context, **{'table': True})))
+            [field.update(self.card_show_val(uid,  line, field, context=dict(context, **{'table': True}), user=user))
              for field in new_fields]
             tree_val = {
                 'title': line['display_name'],
@@ -721,7 +731,7 @@ class MobileController(http.Controller):
             return value
         return ''
 
-    def get_record_one2many(self, uid, record, field, context=None):
+    def get_record_one2many(self, uid, record, field, context=None, user=None):
         """
         这个是设计前期的一个方案，估计要废弃 。查看的from视图的table
         :param uid:
@@ -738,7 +748,7 @@ class MobileController(http.Controller):
             table_header.append(son_field.get('title'))
         for line in record[field.get('name')]:
             new_fields = copy.deepcopy(many_field)
-            [field.update(self.card_show_val(uid,  line, field, context=context))
+            [field.update(self.card_show_val(uid,  line, field, context=context, user=user))
              for field in new_fields]
             table_body.append(new_fields)
         return {'tableTh': table_header, 'tableBody': table_body}
@@ -818,6 +828,7 @@ class MobileController(http.Controller):
         :return:
         """
         all_field = []
+        user = pool.get('res.users').browse(cr, uid, uid, context=context)
         default_val = pool.get(model_name).default_get(cr, uid, [field.ir_field.name for field
                                                                  in view_row.mobile_field_ids], context=context)
         all_groups = pool.get('res.users').read(cr, uid, [uid], ['groups_id'], context=context)[0]['groups_id']
@@ -850,10 +861,9 @@ class MobileController(http.Controller):
             })
         for record in pool.get(model_name).browse(cr, uid, record_ids, context=context):
             new_fields = copy.deepcopy(all_field)
-            [field.update(self.card_show_val(uid,  record, field, context=context))
+            [field.update(self.card_show_val(uid,  record, field, context=context, user=user))
              for field in new_fields]
             return {'fieldVals': new_fields, 'id': record.id}
-
         return {'fieldVals': all_field, 'id': 0}
 
     # /odoo/form/view/data

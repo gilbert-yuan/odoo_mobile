@@ -66,11 +66,11 @@
             <field name='model'>mobile.field</field>
             <field name='arch' type='xml'>
                 <tree string='field'>
-                    <field name='sequence' />
-                    <field name='view_id' />
+                    <field name='sequence' invisible="1"/>
+                    <field name='view_id' invisible="1"/>
                     <field name='ir_field' domain="[('model_id', '=', model_id)]"/>
-                    <field name='field_relation' />
-                    <field name='field_selection' />
+                    <field name='field_relation' invisible="1"/>
+                    <field name='field_selection' invisible="1"/>
                     <field name='model_id' />
                     <field name='readonly' />
                     <field name='required' />
@@ -86,18 +86,20 @@
             <field name='arch' type='xml'>
                 <form string='field'>
                     <group>
-                        <field name='view_id' />
-                        <field name='ir_field'  domain="[('model_id', '=', model_id)]"/>
-                        <field name='field_relation' />
-                        <field name='field_selection' />
+                        <field name='view_id' invisible="1"/>
                         <field name='model_id' />
+                        <field name='ir_field'  domain="[('model_id', '=', model_id)]"/>
+                        <field name='field_relation' invisible="1"/>
+                        <field name='field_selection' invisible="1"/>
+                        <field name='field_type' />
+                        <field name='domain' attrs="{'invisible':[('field_type', 'not in', ('many2one', 'many2many'))]}"/>
                         <field name='readonly' />
                         <field name='required' />
                         <field name='invisible' />
                         <field name='is_show_edit_form' />
                         <field name='is_show_form_tree' />
-                        <field name='many_field' />
                         <field name='group_ids' widget="many2many_tags"/>
+                        <field name='many_field' attrs="{'invisible':[('field_type', 'not in', ('many2many'))]}"/>
                     </group>
                 </form>
             </field>
@@ -168,8 +170,8 @@
             <field name='model'>mobile.domain</field>
             <field name='arch' type='xml'>
                 <tree string='view'>
-                    <field name='domain' />
                     <field name='sequence'/>
+                    <field name='domain' />
                     <field name='name' />
                     <field name='group_ids' widget="many2many_tags"/>
                 </tree>
@@ -208,7 +210,7 @@
                     <group>
                         <field name='name' />
                         <field name='button_method'/>
-                        <field name='show_condition' />
+                        <field name='show_condition' string="domain"/>
                         <field name='group_ids' />
                     </group>
                 </form>
