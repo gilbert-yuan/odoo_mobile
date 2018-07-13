@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <record id="mobile_grid_label_hr_express" model="mobile.grid.label">
+            <field name="name">人力资源</field>
+            <field name="sequence">001</field>
+        </record>
+
+        <record id="mobile_grid_ask_for_leave" model="mobile.grid">
+            <field name="label_id" ref="mobile_grid_label_hr_express"/>
+            <field name="sequence">0001</field>
+            <field name="title">调休</field>
+            <field name="image" type="base64" file="mobile/static/description/ask_for_leave.png"/>
+            <field name="group_ids" eval="[(0,0, ref('base.group_user'))]"/>
+        </record>
+        <record id="mobile_grid_workover" model="mobile.grid">
+            <field name="label_id" ref="mobile_grid_label_hr_express"/>
+            <field name="sequence">0001</field>
+            <field name="title">加班</field>
+            <field name="image" type="base64" file="mobile/static/description/work_over.png"/>
+            <field name="group_ids" eval="[(0,0, ref('base.group_user'))]"/>
+        </record>
+
+        <record id="mobile_action_ask_for_leave" model="mobile.action">
+            <field name="mobile_grid_id" ref="mobile_grid_ask_for_leave"/>
+            <field name="sequence">0001</field>
+            <field name="name">调休</field>
+            <field name="limit">6</field>
+            <field name="offset">0</field>
+            <field name="context">{}</field>
+            <field name="model_id" ref="dftg_ext.model_work_overtime_leave"/>
+        </record>
+
+        <record id="mobile_field_ask_for_leave_leave_user_id" model="mobile.field">
+            <field name="ir_field" ref="dftg_ext.field_work_overtime_leave_user_id"/>
+            <field name="domain">[('active', '=', True)]</field>
+            <field name="readonly">True</field>
+        </record>
+        <record id="mobile_field_ask_for_leave_leave_hour_qty" model="mobile.field">
+            <field name="ir_field" ref="dftg_ext.field_work_overtime_leave_hour_qty"/>
+         </record>
+        <record id="mobile_field_ask_for_leave_leave_end_time" model="mobile.field">
+            <field name="ir_field" ref="dftg_ext.field_work_overtime_leave_end_time"/>
+         </record>
+        <record id="mobile_field_field_work_overtime_leave_hour_qty" model="mobile.field">
+            <field name="ir_field" ref="dftg_ext.field_work_overtime_leave_hour_qty"/>
+         </record>
+        <!--<record id="mobile_field_field_work_overtime_leave_reconcile_ids" model="mobile.field">-->
+            <!--<field name="ir_field" ref="dftg_ext.field_work_overtime_leave_reconcile_ids"/>-->
+            <!--<field name="domain">[('is_approve', '=', True), ('residue_qty', '>', 0)]</field>-->
+         <!--</record>-->
+        <record id="mobile_field_field_work_overtime_leave_note" model="mobile.field">
+            <field name="ir_field" ref="dftg_ext.field_work_overtime_leave_note"/>
+         </record>
+
+        <record id="mobile_view_ask_for_leave" model="mobile.view">
+            <field name="mobile_action_id" ref="mobile_action_ask_for_leave"/>
+            <field name="no_form">True</field>
+            <field name="view_type">card</field>
+            <field name="model_id" ref="dftg_ext.model_work_overtime_leave"/>
+            <field name="context">{'default_vals': {'type': 'changeworkday'}}</field>
+            <field name="model_id" ref="dftg_ext.model_work_overtime_leave"/>
+        </record>
+
+        <record id="mobile_action_work_overtime" model="mobile.action">
+            <field name="mobile_grid_id" ref="mobile_grid_ask_for_leave"/>
+            <field name="sequence">0001</field>
+            <field name="name">加班</field>
+            <field name="limit">6</field>
+            <field name="offset">0</field>
+            <field name="context">{}</field>
+            <field name="model_id" ref="dftg_ext.model_work_overtime_leave"/>
+        </record>
+
+        <record id="mobile_view_work_overtime" model="mobile.view">
+            <field name="mobile_action_id" ref="mobile_action_ask_for_leave"/>
+            <field name="no_form">True</field>
+            <field name="view_type">card</field>
+            <field name="model_id" ref="dftg_ext.model_work_overtime_leave"/>
+            <field name="context">{'default_vals': {'type': 'overtime'}}</field>
+            <field name="model_id" ref="dftg_ext.model_work_overtime_leave"/>
+        </record>
+
+    </data>
+</openerp>

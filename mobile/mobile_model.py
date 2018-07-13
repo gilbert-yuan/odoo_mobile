@@ -64,6 +64,12 @@ class MobileAction(osv.osv):
     _sql_constraints =[
         ('model_mobile_grid_id_field_id_uniq', 'unique (mobile_grid_id)', u'一个菜单只能对应一个动作'),
     ]
+    _defaults = {
+        'limit': 6,
+        'offset': 0,
+        'order': 'id DESC',
+        'context': '{}',
+    }
 
 
 class MobileView(osv.osv):
@@ -71,7 +77,7 @@ class MobileView(osv.osv):
     _rec_name = 'mobile_action_id'
 
     _columns = {
-        'mobile_action_id': fields.many2one('mobile.action', u'动作'),
+        'mobile_action_id': fields.many2one('mobile.action', u'动作', required=True),
         'mobile_field_ids': fields.one2many('mobile.field', 'view_id', string=u'视图表', copy=True),
         'no_form': fields.boolean(u'不显示form', help="视图类型是card的，不推荐再次显示form"),
         'model_id': fields.many2one('ir.model', u'模型名称', copy=True),
@@ -80,7 +86,7 @@ class MobileView(osv.osv):
                                        ('view_form', u'表单'), ('edit_form', '编辑表单')], u'view type',
                                       help="", copy=True),
         'button_ids': fields.one2many('mobile.button', 'view_id', string='buttons', copy=True, help="这个地方的按钮主要是针对，"),
-        'show_form_view': fields.many2one('mobile.view', u'展示表单', copy=True),
+        'show_form_view': fields.many2one('mobile.view', u'新建编辑视图', copy=True),
         'context': fields.text(u'附加值'),
     }
     _defaults = {
@@ -107,27 +113,8 @@ class MobileDomain(osv.osv):
         'domain': fields.char(u'domain', copy=True),
         'sequence': fields.integer(u'顺序', copy=True),
         'group_ids': fields.many2many('res.groups', 'domain_groups_rel', 'domain_id', 'group_id', string='用户组'),
-        'user_ids': fields.many2many('res.users', 'domain_group_user_rel', 'user_id', 'group_id', string='用户信息'),
         'name': fields.char(u'名称', copy=True)
     }
-
-    def create(self, cr, uid, vals, context=None):
-        return_val = super(MobileDomain, self).create(cr, uid, vals, context=context)
-        if vals.get('group_ids'):
-            for grid in self.browse(cr, uid, return_val, context=context):
-                user_ids = [user.id for group in grid.group_ids for user in group.users]
-                self.write(cr, uid, return_val, {'user_ids': [(6, 0, user_ids)]}, context=context)
-                return return_val
-        return return_val
-
-    def write(self, cr, uid, ids, vals, context=None):
-        return_val = super(MobileDomain, self).write(cr, uid, ids, vals, context=context)
-        if vals.get('group_ids'):
-             for grid in self.browse(cr, uid, ids, context=context):
-                user_ids = [user.id for group in grid.group_ids for user in group.users]
-                self.write(cr, uid, ids, {'user_ids': [(6, 0, user_ids)]}, context=context)
-                return return_val
-        return return_val
 
 
 class MobileButton(osv.osv):
@@ -138,7 +125,6 @@ class MobileButton(osv.osv):
         'show_condition': fields.char(u'显示前提', copy=True),
         'view_id': fields.many2one('mobile.view', string=u'视图', copy=True),
         'group_ids': fields.many2many('res.groups', 'button_groups_rel', 'button_id', 'group_id', string='用户组'),
-        'user_ids': fields.many2many('res.users', 'domain_group_user_rel', 'user_id', 'group_id', string='用户信息'),
     }
     _defaults = {
         'show_condition': []
@@ -168,7 +154,6 @@ class MobileField(osv.osv):
     _order = 'sequence'
     _columns = {
         'group_ids': fields.many2many('res.groups', 'field_groups_rel', 'button_id', 'group_id', string='用户组'),
-        'user_ids': fields.many2many('res.users', 'field_group_user_rel', 'user_id', 'group_id', string='用户信息'),
         'sequence': fields.integer(u'序列'),
         'view_id': fields.many2one('mobile.view', u'视图ID', copy=True),
         'ir_field': fields.many2one('ir.model.fields', u'字段', copy=True),
@@ -186,24 +171,6 @@ class MobileField(osv.osv):
         'field_id': fields.many2one('mobile.field', 'field_id', copy=True),
         'many_field': fields.one2many('mobile.field', 'field_id', string='one2many', copy=True)
     }
-
-    def create(self, cr, uid, vals, context=None):
-        return_val = super(MobileField, self).create(cr, uid, vals, context=context)
-        if vals.get('group_ids'):
-            for grid in self.browse(cr, uid, return_val, context=context):
-                user_ids = [user.id for group in grid.group_ids for user in group.users]
-                self.write(cr, uid, return_val, {'user_ids': [(6, 0, user_ids)]}, context=context)
-                return return_val
-        return return_val
-
-    def write(self, cr, uid, ids, vals, context=None):
-        return_val = super(MobileField, self).write(cr, uid, ids, vals, context=context)
-        if vals.get('group_ids'):
-             for grid in self.browse(cr, uid, ids, context=context):
-                user_ids = [user.id for group in grid.group_ids for user in group.users]
-                self.write(cr, uid, ids, {'user_ids': [(6, 0, user_ids)]}, context=context)
-                return return_val
-        return return_val
 
 
 class MobileGrid(osv.osv):
@@ -225,26 +192,8 @@ class MobileGrid(osv.osv):
         'mobile_action_id': fields.function(_compute_mobile_action_id, type='many2one', relation='mobile.action', string=u'动作'),
         'title': fields.char(u'名称', required=True),
         'group_ids': fields.many2many('res.groups', 'mobile_groups_rel', 'grid_id', 'group_id', string='用户组'),
-        'user_ids': fields.many2many('res.users', 'mobile_group_user_rel', 'user_id', 'group_id', string='用户信息'),
+
     }
-
-    def create(self, cr, uid, vals, context=None):
-        return_val = super(MobileGrid, self).create(cr, uid, vals, context=context)
-        if vals.get('group_ids'):
-            for grid in self.browse(cr, uid, return_val, context=context):
-                user_ids = [user.id for group in grid.group_ids for user in group.users]
-                self.write(cr, uid, return_val, {'user_ids': [(6, 0, user_ids)]}, context=context)
-                return return_val
-        return return_val
-
-    def write(self, cr, uid, ids, vals, context=None):
-        return_val = super(MobileGrid, self).write(cr, uid, ids, vals, context=context)
-        if vals.get('group_ids'):
-             for grid in self.browse(cr, uid, ids, context=context):
-                user_ids = [user.id for group in grid.group_ids for user in group.users]
-                self.write(cr, uid, ids, {'user_ids': [(6, 0, user_ids)]}, context=context)
-                return return_val
-        return return_val
 
 
 class GraphViewOverView(osv.osv):
@@ -265,7 +214,7 @@ class GraphViewOverView(osv.osv):
                                        area_opacity=view_row['area_opacity'],
                                        symbol=view_row['symbol'],
                                        symbol_size=view_row['symbol_size'],
-                                       mark_point=eval(view_row['mark_point'] or  '[]'),
+                                       mark_point=eval(view_row['mark_point'] or '[]'),
                                        is_step=view_row['is_step'],
                                        mark_point_symbol=view_row['mark_point_symbol'],
                                        mark_point_textcolor=view_row['mark_point_textcolor'],
@@ -516,18 +465,9 @@ class MobileController(http.Controller):
         type_dict = {
             'card': self.get_card_view_data,
             'tree': self.get_tree_view_data,
-            'bar': self.get_bar_view_data,
+            #'bar': self.get_bar_view_data,
         }
         return type_dict.get(type)
-
-    # def get_bar_view_data(self, pool, cr, uid, view_row, record_ids, model_name, context=None):
-    #     attr = ["衬衫", "羊毛衫", "雪纺衫", "裤子", "高跟鞋", "袜子"]
-    #     v1 = [5, 20, 36, 10, 75, 90]
-    #     v2 = [10, 25, 8, 60, 20, 80]
-    #     bar = Bar(u"柱状图数据堆叠示例")
-    #     bar.add(u"商家A", attr, v1, is_stack=True)
-    #     bar.add(u"商家B", attr, v2, is_stack=True)
-    #     bar.render(path='gri3d.png')
 
     def get_all_field_setting(self, field):
         """

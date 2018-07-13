@@ -91,7 +91,7 @@
                         <field name='ir_field'  domain="[('model_id', '=', model_id)]"/>
                         <field name='field_relation' invisible="1"/>
                         <field name='field_selection' invisible="1"/>
-                        <field name='field_type' />
+                        <!--<field name='field_type' />-->
                         <field name='domain' attrs="{'invisible':[('field_type', 'not in', ('many2one', 'many2many'))]}"/>
                         <field name='readonly' />
                         <field name='required' />
