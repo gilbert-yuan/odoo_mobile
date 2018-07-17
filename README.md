@@ -1,4 +1,4 @@
-# odoo_mobile
+# odoo_mobile（大部分功能仅在odoo 8.0中进行实现，10.0 需要在以后再进行完善）
 ## 图文演示 http://blog.sina.com.cn/s/blog_bc7dee2d0102xrl7.html
 vux 实现对接odoo 配置出手机端 (目前主要开发8.0版本)
 1. 安装模块
