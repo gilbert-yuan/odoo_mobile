@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <openerp>
     <data>
-        <menuitem id="dtfg_menu_mobile" name="手机视图" />
-        <menuitem id="dtfg_menu_mobile_setting" name="手机视图设置" parent="dtfg_menu_mobile"/>
+        <menuitem id="dtfg_menu_mobile" name="手机视图" groups="base.group_erp_manager"/>
+        <menuitem id="dtfg_menu_mobile_setting" name="手机视图设置" parent="dtfg_menu_mobile" />
         <record id='weixin_mobile_grid_tree' model='ir.ui.view'>
             <field name='name'>mobile.grid.tree</field>
             <field name='model'>mobile.grid</field>
@@ -66,7 +66,7 @@
             <field name='model'>mobile.field</field>
             <field name='arch' type='xml'>
                 <tree string='field'>
-                    <field name='sequence' invisible="1"/>
+                    <field name='sequence'  readonly="1"/>
                     <field name='view_id' invisible="1"/>
                     <field name='ir_field' domain="[('model_id', '=', model_id)]"/>
                     <field name='field_relation' invisible="1"/>
@@ -91,7 +91,7 @@
                         <field name='ir_field'  domain="[('model_id', '=', model_id)]"/>
                         <field name='field_relation' invisible="1"/>
                         <field name='field_selection' invisible="1"/>
-                        <!--<field name='field_type' />-->
+                        <field name='field_type' invisible="1"/>
                         <field name='domain' attrs="{'invisible':[('field_type', 'not in', ('many2one', 'many2many'))]}"/>
                         <field name='readonly' />
                         <field name='required' />
@@ -125,6 +125,7 @@
             <field name='model'>mobile.view</field>
             <field name='arch' type='xml'>
                 <tree string='view'>
+                    <field name='name' />
                     <field name='mobile_field_ids' />
                     <field name='no_form' />
                     <field name='domain_ids'/>
@@ -138,6 +139,7 @@
             <field name='arch' type='xml'>
                 <form string='view'>
                     <group>
+                        <field name='name' required="1"/>
                         <field name='mobile_action_id' />
                         <field name='mobile_field_ids' />
                         <field name='no_form' />
@@ -145,7 +147,7 @@
                         <field name='view_type' />
                         <field name='context' />
                         <field name='button_ids'/>
-                        <field name='show_form_view' attrs="{'invisible':[('no_form', '=', True)]}"/>
+                        <field name='show_form_view' attrs="{'invisible':[('mobile_action_id', '=', False)]}" domain="[('mobile_action_id', '=', False)]"/>
                     </group>
                 </form>
             </field>
@@ -155,6 +157,7 @@
             <field name="res_model">mobile.view</field>
             <field name="view_type">form</field>
              <field name="view_mode">tree,form</field>
+             <field name="domain">[('mobile_action_id', '!=', False)]</field>
             <field name="help" type="html">
               <p class="oe_view_nocontent_create">
                 Click to register new expenses.
@@ -169,10 +172,11 @@
             <field name='name'>mobile.domain.form</field>
             <field name='model'>mobile.domain</field>
             <field name='arch' type='xml'>
-                <tree string='view'>
-                    <field name='sequence'/>
+                <tree string='view' editable="bottom">
+                    <field name='sequence' readonly="1"/>
                     <field name='domain' />
                     <field name='name' />
+                    <field name='need_badge' />
                     <field name='group_ids' widget="many2many_tags"/>
                 </tree>
             </field>
@@ -209,6 +213,7 @@
                 <form string='view' >
                     <group>
                         <field name='name' />
+                        <field name='style' />
                         <field name='button_method'/>
                         <field name='show_condition' string="domain"/>
                         <field name='group_ids' />
@@ -229,101 +234,101 @@
             </field>
         </record>
 
-        <record id='weixin_mobile_graph_view_tree' model='ir.ui.view'>
-            <field name='name'>graph.view.over.view.tree</field>
-            <field name='model'>graph.view.over.view</field>
-            <field name='arch' type='xml'>
-                <tree string='手机菜单'>
-                    <field name='view_title' />
-                    <field name='view_type'/>
-                    <field name='model_name'/>
-                    <field name='domain' />
-                    <field name='fields'/>
-                    <field name='groupby'/>
-                    <field name='orderby'/>
-                    <field name='limit'/>
-                    <field name='context'/>
-                </tree>
-            </field>
-        </record>
-        <record id='weixin_mobile_graph_view_form' model='ir.ui.view'>
-            <field name='name'>graph.view.over.view.tree</field>
-            <field name='model'>graph.view.over.view</field>
-            <field name='arch' type='xml'>
-                <form string='手机菜单'>
-                    <group>
-                        <group>
-                            <field name='view_title' />
-                            <field name='view_type'/>
-                            <field name='model_name'/>
-                            <field name='domain' />
-                            <field name='fields'/>
-                            <field name='groupby'/>
-                            <field name='orderby'/>
-                            <field name='limit'/>
-                            <field name='context'/>
-                        </group>
-                        <group string="Base">
-                             <field name='is_label_show' />
-                             <field name='is_toolbox_show' />
-                             <field name='is_stack' />
-                             <field name='title_pos' />
-                             <field name='width' />
-                             <field name='height' />
-                             <field name='is_convert' />
-                             <field name='label_pos' />
-                             <field name='legend_top' />
-                             <field name='label_text_color' />
-                               <field name='mark_point' />
-                             <field name='mark_line' />
-                        </group>
-                        <group string="pie">
-                             <field name='radius' />
-                             <field name='center' />
-                             <field name='is_random' />
-                             <field name='rosetype' />
-                        </group>
-                        <group string="line">
-                             <field name='is_smooth' />
-                             <field name='is_fill' />
-                             <field name='line_opacity' />
-                             <field name='area_opacity' />
-                             <field name='symbol' />
-                             <field name='symbol_size' />
-                             <field name='is_step' />
-                             <field name='mark_point_symbol' />
-                             <field name='mark_point_textcolor' />
-                        </group>
-                         <group string="bar">
-                             <field name='bar_category_gap' />
-                             <field name='is_datazoom_show' />
-                             <field name='datazoom_type' />
-                             <field name='datazoom_range' />
-                        </group>
-                    </group>
-                    <notebook>
-                        <page>
-                            <field name='html' widget="html"/>
-                        </page>
-                    </notebook>
-                </form>
-            </field>
-        </record>
-        <record id="weixin_mobile_graph_view_action" model="ir.actions.act_window">
-            <field name="name">手机菜单</field>
-            <field name="res_model">graph.view.over.view</field>
-            <field name="view_type">form</field>
-             <field name="view_mode">tree,form</field>
-            <field name="help" type="html">
-              <p class="oe_view_nocontent_create">
-                Click to register new expenses.
-              </p><p>
-              </p>
-            </field>
-        </record>
+        <!--<record id='weixin_mobile_graph_view_tree' model='ir.ui.view'>-->
+            <!--<field name='name'>graph.view.over.view.tree</field>-->
+            <!--<field name='model'>graph.view.over.view</field>-->
+            <!--<field name='arch' type='xml'>-->
+                <!--<tree string='手机菜单'>-->
+                    <!--<field name='view_title' />-->
+                    <!--<field name='view_type'/>-->
+                    <!--<field name='model_name'/>-->
+                    <!--<field name='domain' />-->
+                    <!--<field name='fields'/>-->
+                    <!--<field name='groupby'/>-->
+                    <!--<field name='orderby'/>-->
+                    <!--<field name='limit'/>-->
+                    <!--<field name='context'/>-->
+                <!--</tree>-->
+            <!--</field>-->
+        <!--</record>-->
+        <!--<record id='weixin_mobile_graph_view_form' model='ir.ui.view'>-->
+            <!--<field name='name'>graph.view.over.view.tree</field>-->
+            <!--<field name='model'>graph.view.over.view</field>-->
+            <!--<field name='arch' type='xml'>-->
+                <!--<form string='手机菜单'>-->
+                    <!--<group>-->
+                        <!--<group>-->
+                            <!--<field name='view_title' />-->
+                            <!--<field name='view_type'/>-->
+                            <!--<field name='model_name'/>-->
+                            <!--<field name='domain' />-->
+                            <!--<field name='fields'/>-->
+                            <!--<field name='groupby'/>-->
+                            <!--<field name='orderby'/>-->
+                            <!--<field name='limit'/>-->
+                            <!--<field name='context'/>-->
+                        <!--</group>-->
+                        <!--<group string="Base">-->
+                             <!--<field name='is_label_show' />-->
+                             <!--<field name='is_toolbox_show' />-->
+                             <!--<field name='is_stack' />-->
+                             <!--<field name='title_pos' />-->
+                             <!--<field name='width' />-->
+                             <!--<field name='height' />-->
+                             <!--<field name='is_convert' />-->
+                             <!--<field name='label_pos' />-->
+                             <!--<field name='legend_top' />-->
+                             <!--<field name='label_text_color' />-->
+                               <!--<field name='mark_point' />-->
+                             <!--<field name='mark_line' />-->
+                        <!--</group>-->
+                        <!--<group string="pie">-->
+                             <!--<field name='radius' />-->
+                             <!--<field name='center' />-->
+                             <!--<field name='is_random' />-->
+                             <!--<field name='rosetype' />-->
+                        <!--</group>-->
+                        <!--<group string="line">-->
+                             <!--<field name='is_smooth' />-->
+                             <!--<field name='is_fill' />-->
+                             <!--<field name='line_opacity' />-->
+                             <!--<field name='area_opacity' />-->
+                             <!--<field name='symbol' />-->
+                             <!--<field name='symbol_size' />-->
+                             <!--<field name='is_step' />-->
+                             <!--<field name='mark_point_symbol' />-->
+                             <!--<field name='mark_point_textcolor' />-->
+                        <!--</group>-->
+                         <!--<group string="bar">-->
+                             <!--<field name='bar_category_gap' />-->
+                             <!--<field name='is_datazoom_show' />-->
+                             <!--<field name='datazoom_type' />-->
+                             <!--<field name='datazoom_range' />-->
+                        <!--</group>-->
+                    <!--</group>-->
+                    <!--<notebook>-->
+                        <!--<page>-->
+                            <!--<field name='html' widget="html"/>-->
+                        <!--</page>-->
+                    <!--</notebook>-->
+                <!--</form>-->
+            <!--</field>-->
+        <!--</record>-->
+        <!--<record id="weixin_mobile_graph_view_action" model="ir.actions.act_window">-->
+            <!--<field name="name">手机菜单</field>-->
+            <!--<field name="res_model">graph.view.over.view</field>-->
+            <!--<field name="view_type">form</field>-->
+             <!--<field name="view_mode">tree,form</field>-->
+            <!--<field name="help" type="html">-->
+              <!--<p class="oe_view_nocontent_create">-->
+                <!--Click to register new expenses.-->
+              <!--</p><p>-->
+              <!--</p>-->
+            <!--</field>-->
+        <!--</record>-->
 
-        <menuitem id="weixin_mobile_graph_view_action_meun" name="手机端图表配置"
-                  parent="dtfg_menu_mobile_setting" action="weixin_mobile_graph_view_action"/>
+        <!--<menuitem id="weixin_mobile_graph_view_action_meun" name="手机端图表配置"-->
+                  <!--parent="dtfg_menu_mobile_setting" action="weixin_mobile_graph_view_action"/>-->
 
     </data>
 </openerp>
