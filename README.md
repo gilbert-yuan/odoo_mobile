@@ -5,9 +5,11 @@ vux 实现对接odoo 配置出手机端 (目前主要开发8.0版本)
 ![](https://github.com/gilbert-yuan/odoo_mobile/blob/8.0/mobile/description/QQ20180629-101702.png)
 ![](https://github.com/gilbert-yuan/odoo_mobile/blob/8.0/mobile/description/QQ20180629-101646.png)
 ![](https://github.com/gilbert-yuan/odoo_mobile/blob/8.0/mobile/description/QQ20180629-101742.png)
-![](https://github.com/gilbert-yuan/odoo_mobile/blob/8.0/mobile/description/QQ20180629-101702.png)
-![](https://github.com/gilbert-yuan/odoo_mobile/blob/8.0/mobile/description/QQ20180629-101702.png)
-![](https://github.com/gilbert-yuan/odoo_mobile/blob/8.0/mobile/description/QQ20180629-101702.png)
+![](https://github.com/gilbert-yuan/odoo_mobile/blob/8.0/mobile/description/2018-07-23%2017.23.37.gif)
+![](https://github.com/gilbert-yuan/odoo_mobile/blob/8.0/mobile/description/2018-07-23%2017.27.12.gif)
+![](https://github.com/gilbert-yuan/odoo_mobile/blob/8.0/mobile/description/2018-07-23%2017.27.47.gif)
+![](https://github.com/gilbert-yuan/odoo_mobile/blob/8.0/mobile/description/2018-07-23%2017.31.17.gif)
+![](https://github.com/gilbert-yuan/odoo_mobile/blob/8.0/mobile/description/2018-07-23%2017.30.40.gif)
 1. 安装模块
   找到对应的版本安装模块
     
