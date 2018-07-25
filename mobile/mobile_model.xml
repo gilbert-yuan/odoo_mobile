@@ -202,7 +202,7 @@
                     <field name='name' />
                     <field name='button_method'/>
                     <field name='show_condition' />
-                    <field name='group_ids' />
+                    <field name='group_ids' widget="many2many_tags"/>
                 </tree>
             </field>
         </record>
@@ -216,7 +216,7 @@
                         <field name='style' />
                         <field name='button_method'/>
                         <field name='show_condition' string="domain"/>
-                        <field name='group_ids' />
+                        <field name='group_ids' widget="many2many_tags"/>
                     </group>
                 </form>
             </field>
