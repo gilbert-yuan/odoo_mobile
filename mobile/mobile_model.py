@@ -22,7 +22,7 @@ if hasattr(sys, 'frozen'):
     path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'html'))
     loader = jinja2.FileSystemLoader(path)
 else:
-    loader = jinja2.PackageLoader('openerp.addons.dftg_weixin', "html")
+    loader = jinja2.PackageLoader('openerp.addons.mobile', "html")
 
 env = jinja2.Environment('<%', '%>', '${', '}', '%', loader=loader, autoescape=True)
 

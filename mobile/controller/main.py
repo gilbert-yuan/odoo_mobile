@@ -24,7 +24,7 @@ if hasattr(sys, 'frozen'):
     path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'html'))
     loader = jinja2.FileSystemLoader(path)
 else:
-    loader = jinja2.PackageLoader('openerp.addons.dftg_weixin', "html")
+    loader = jinja2.PackageLoader('openerp.addons.mobile', "html")
 
 env = jinja2.Environment('<%', '%>', '${', '}', '%', loader=loader, autoescape=True)
 
@@ -38,7 +38,7 @@ class MobileController(http.Controller):
         :return:
         """
 
-        template = env.get_template("mobile/index.html")
+        template = env.get_template("index.html")
         return template.render()
 
     @http.route('/odoo/mobile/get/all/grid_data', auth='mobile', type='http', method=['GET'])
