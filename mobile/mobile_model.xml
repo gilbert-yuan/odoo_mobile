@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <openerp>
     <data>
-        <menuitem id="dtfg_menu_mobile" name="手机视图" />
-        <menuitem id="dtfg_menu_mobile_setting" name="手机视图设置" parent="dtfg_menu_mobile"/>
+        <menuitem id="dtfg_menu_mobile" name="手机视图" groups="base.group_erp_manager"/>
+        <menuitem id="dtfg_menu_mobile_setting" name="手机视图设置" parent="dtfg_menu_mobile" />
         <record id='weixin_mobile_grid_tree' model='ir.ui.view'>
             <field name='name'>mobile.grid.tree</field>
             <field name='model'>mobile.grid</field>
@@ -12,6 +12,7 @@
                     <field name='sequence'/>
                     <field name='image'/>
                     <field name='title' />
+                    <field name='group_ids' widget="many2many_tags"/>
                 </tree>
             </field>
         </record>
@@ -31,7 +32,7 @@
                   parent="dtfg_menu_mobile_setting" action="weixin_mobile_grid_action"/>
 
         <record id='weixin_mobile_action_tree' model='ir.ui.view'>
-            <field name='name'>mobile action tree</field>
+            <field name='name'>mobile.action.tree</field>
             <field name='model'>mobile.action</field>
             <field name='arch' type='xml'>
                 <tree string='action' editable='bottom'>
@@ -61,15 +62,15 @@
                   parent="dtfg_menu_mobile_setting" action="weixin_mobile_action_action"/>
 
         <record id='weixin_mobile_field_tree' model='ir.ui.view'>
-            <field name='name'>mobile field tree</field>
+            <field name='name'>mobile.field.tree</field>
             <field name='model'>mobile.field</field>
             <field name='arch' type='xml'>
                 <tree string='field'>
-                    <field name='sequence' />
-                    <field name='view_id' />
+                    <field name='sequence'  readonly="1"/>
+                    <field name='view_id' invisible="1"/>
                     <field name='ir_field' domain="[('model_id', '=', model_id)]"/>
-                    <field name='field_relation' />
-                    <field name='field_selection' />
+                    <field name='field_relation' invisible="1"/>
+                    <field name='field_selection' invisible="1"/>
                     <field name='model_id' />
                     <field name='readonly' />
                     <field name='required' />
@@ -85,17 +86,20 @@
             <field name='arch' type='xml'>
                 <form string='field'>
                     <group>
-                        <field name='view_id' />
-                        <field name='ir_field'  domain="[('model_id', '=', model_id)]"/>
-                        <field name='field_relation' />
-                        <field name='field_selection' />
+                        <field name='view_id' invisible="1"/>
                         <field name='model_id' />
+                        <field name='ir_field'  domain="[('model_id', '=', model_id)]"/>
+                        <field name='field_relation' invisible="1"/>
+                        <field name='field_selection' invisible="1"/>
+                        <field name='field_type' invisible="1"/>
+                        <field name='domain' attrs="{'invisible':[('field_type', 'not in', ('many2one', 'many2many'))]}"/>
                         <field name='readonly' />
                         <field name='required' />
                         <field name='invisible' />
                         <field name='is_show_edit_form' />
                         <field name='is_show_form_tree' />
-                        <field name='many_field' />
+                        <field name='group_ids' widget="many2many_tags"/>
+                        <field name='many_field' attrs="{'invisible':[('field_type', 'not in', ('many2many'))]}"/>
                     </group>
                 </form>
             </field>
@@ -121,6 +125,7 @@
             <field name='model'>mobile.view</field>
             <field name='arch' type='xml'>
                 <tree string='view'>
+                    <field name='name' />
                     <field name='mobile_field_ids' />
                     <field name='no_form' />
                     <field name='domain_ids'/>
@@ -134,6 +139,7 @@
             <field name='arch' type='xml'>
                 <form string='view'>
                     <group>
+                        <field name='name' required="1"/>
                         <field name='mobile_action_id' />
                         <field name='mobile_field_ids' />
                         <field name='no_form' />
@@ -141,7 +147,7 @@
                         <field name='view_type' />
                         <field name='context' />
                         <field name='button_ids'/>
-                        <field name='show_form_view' attrs="{'invisible':[('no_form', '=', True)]}"/>
+                        <field name='show_form_view' attrs="{'invisible':[('mobile_action_id', '=', False)]}" domain="[('mobile_action_id', '=', False)]"/>
                     </group>
                 </form>
             </field>
@@ -151,6 +157,7 @@
             <field name="res_model">mobile.view</field>
             <field name="view_type">form</field>
              <field name="view_mode">tree,form</field>
+             <field name="domain">[('mobile_action_id', '!=', False)]</field>
             <field name="help" type="html">
               <p class="oe_view_nocontent_create">
                 Click to register new expenses.
@@ -165,10 +172,12 @@
             <field name='name'>mobile.domain.form</field>
             <field name='model'>mobile.domain</field>
             <field name='arch' type='xml'>
-                <tree string='view'>
+                <tree string='view' editable="bottom">
+                    <field name='sequence' readonly="1"/>
                     <field name='domain' />
-                    <field name='sequence'/>
                     <field name='name' />
+                    <field name='need_badge' />
+                    <field name='group_ids' widget="many2many_tags"/>
                 </tree>
             </field>
         </record>
@@ -193,7 +202,7 @@
                     <field name='name' />
                     <field name='button_method'/>
                     <field name='show_condition' />
-                    <field name='group_ids' />
+                    <field name='group_ids' widget="many2many_tags"/>
                 </tree>
             </field>
         </record>
@@ -204,9 +213,10 @@
                 <form string='view' >
                     <group>
                         <field name='name' />
+                        <field name='style' />
                         <field name='button_method'/>
-                        <field name='show_condition' />
-                        <field name='group_ids' />
+                        <field name='show_condition' string="domain"/>
+                        <field name='group_ids' widget="many2many_tags"/>
                     </group>
                 </form>
             </field>
