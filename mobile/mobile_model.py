@@ -84,7 +84,7 @@ class MobileView(models.Model):
 class One2ManyField(models.Model):
     _name = 'one.many.field'
 
-    mobile_field_ids = fields.Many2many('mobile.field', 'view_id', string=u'视图表'),
+    mobile_field_ids = fields.Many2many('mobile.field', 'view_id', string=u'视图表')
 
 
 class MobileDomain(models.Model):
@@ -520,9 +520,10 @@ class MobileController(http.Controller):
         method = args.get('method')
         ids = int(args.get('ids'))
         model_obj = request.env[model]
-        if model_obj and hasattr(model_obj, method) and ids:
+        if hasattr(model_obj, method) and ids:
             try:
-                getattr(model_obj.browse(ids), method)()
+                model_row = model_obj.browse(ids)
+                getattr(model_row, method)()
                 return simplejson.dumps({'success': True})
             except Exception as exc:
                 if isinstance(exc, basestring):
@@ -535,6 +536,8 @@ class MobileController(http.Controller):
                     return simplejson.dumps({'success': False, 'errMsg': u'%s' % exc.message})
                 elif exc and hasattr(exc, dict):
                     return simplejson.dumps({'success': False, 'errMsg': u'%s' % exc.get('message')})
+        else:
+            return simplejson.dumps({'success': False, 'errMsg': u'%s' % '参数错误'})
 
     def get_many_field_value(self, field):
         """
@@ -660,12 +663,10 @@ class MobileController(http.Controller):
         value = args.get('value', '')
         domain = eval(args.get('domain', '[]'))
         model_row = request.env[model_name]
-        return_val_list_dict = []
         if value:
             return_val = getattr(model_row, 'name_search')( name=value, operator='ilike', args=domain, limit=limit)
         else:
             return_ids = getattr(model_row, 'search')(domain, limit=limit)
-            print return_ids
             return_val = getattr(return_ids, 'name_get')()
         return_val_list_dict = [{'key': val[0], 'value': val[1]} for val in return_val]
         return simplejson.dumps(return_val_list_dict)
@@ -679,20 +680,18 @@ class MobileController(http.Controller):
         """
         dict_val = {}
         for val in vals:
-            if not val.get('value'):
-                continue
             if val.get('type') in ('text', 'char', 'date', 'selection', 'boolean') \
-                    and val.get('name') != 'id':
+                    and val.get('name') != 'id' and val.get('value'):
                 dict_val.update({val.get('name'): val.get('value')})
-            elif val.get('type') in ['datetime']:
+            elif val.get('type') in ['datetime'] and val.get('value') :
                 # TODO 这个8小时要换成可配置的，根据时区来判定。
                 date_obj = datetime.datetime.strptime(val.get('value', 0) + ':00', ISODATETIMEFORMAT)
                 dict_val.update({val.get('name'): (date_obj - relativedelta(hours=8)).strftime(ISODATETIMEFORMAT)})
-            elif val.get('type') in ['integer', 'many2one']:
+            elif val.get('type') in ['integer', 'many2one'] and val.get('value'):
                 dict_val.update({val.get('name'): int(val.get('value', 0))})
-            elif val.get('type') in ['float']:
-                dict_val.update({val.get('name'): float(val.get('value', 0))})
-            elif val.get('type') in ['one2many']:
+            elif val.get('type') in ['float'] and val.get('value'):
+                dict_val.update({val.get('name'): float(val.get('value', '0'))})
+            elif val.get('type') in ['one2many'] and val.get('value'):
                 line_vals = []
                 line_ids, origin_ids = [], val.get('ids')
                 for line_val in val.get('value'):
@@ -708,8 +707,10 @@ class MobileController(http.Controller):
                     for delete_id in set(origin_ids) - set(line_ids):
                         line_vals.append((2, delete_id, False))
                 dict_val.update({val.get('name'): line_vals})
-            elif val.get('type') in ['many2many']:
+            elif val.get('type') in ['many2many'] and val.get('value'):
                 dict_val.update({val.get('name'): [(6, 0, val.get('value', []))]})
+            if not val.get('value'):
+                continue
         return dict_val
 
     @http.route('/odoo/mobile/save/record', auth='mobile', type='json', method=['POST'])
@@ -771,4 +772,3 @@ class MobileController(http.Controller):
         else:
             error = "Wrong login/password"
             return {'success': False, 'errMsg': error}
-        isinstance()
