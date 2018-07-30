@@ -267,7 +267,7 @@ class MobileController(http.Controller):
         record_ids = request.env[model_name].search(domain, offset=offset, limit=limit, order=order)
         return_val = []
         for view_row in request.env['mobile.view'].browse(view_id):
-            return_val = self.get_view_type_function(view_row.view_type)(view_row, record_ids or [], model_name)
+            return_val = self.get_view_type_function(view_row.view_type)(view_row, [record.id for record in record_ids] or [], model_name)
             return simplejson.dumps(return_val)
         return simplejson.dumps(return_val)
 
@@ -561,7 +561,7 @@ class MobileController(http.Controller):
         # TODO 默认值尽量手机端页面上没有配置也要正常的写入数据库
         if default_val.get(field_value.get('name')):
             if field_value.get('type') == 'many2one':
-                options = request.env[field_value.get('model')].name_get( default_val.get(field_value.get('name')))
+                options = request.env[field_value.get('model')].browse(default_val.get(field_value.get('name'))).name_get()
                 return {'value': default_val.get(field_value.get('name')),
                         'options': [{'key': option[0], 'value': option[1]} for option in options]}
             else:
@@ -661,13 +661,13 @@ class MobileController(http.Controller):
         domain = eval(args.get('domain', '[]'))
         model_row = request.env[model_name]
         return_val_list_dict = []
-        if model_row:
-            if value:
-                return_val = getattr(model_row, 'name_search')( name=value, operator='ilike', args=domain, limit=limit)
-            else:
-                return_ids = getattr(model_row, 'search')(domain, limit=limit)
-                return_val = getattr(model_row, 'name_get')(return_ids)
-            return_val_list_dict = [{'key': val[0], 'value': val[1]} for val in return_val]
+        if value:
+            return_val = getattr(model_row, 'name_search')( name=value, operator='ilike', args=domain, limit=limit)
+        else:
+            return_ids = getattr(model_row, 'search')(domain, limit=limit)
+            print return_ids
+            return_val = getattr(return_ids, 'name_get')()
+        return_val_list_dict = [{'key': val[0], 'value': val[1]} for val in return_val]
         return simplejson.dumps(return_val_list_dict)
 
     def construct_model_vals(self, id, vals):
@@ -722,18 +722,19 @@ class MobileController(http.Controller):
         uid = request.session.get('uid') or SUPERUSER_ID
         model = request.jsonrequest.get('model')
         vals = request.jsonrequest.get('value')
-        id = request.jsonrequest.get('id')
+        id = int(request.jsonrequest.get('id') or '0')
         vals = self.construct_model_vals(id, vals)
         context_val = eval(request.jsonrequest.get('context', '{}') or '{}')
+        model_obj = request.env[model]
         try:
             if not id:
                 vals.update(context_val.get('default_vals', {}))
-                if request.env[model].create(vals):
+                if model_obj.create(vals):
                     return {'success': True, 'errMsg': u'创建成功！'}
                 else:
                     return {'success': False, 'errMsg': u'创建失败！'}
             else:
-                if request.env[model].write(id, vals):
+                if model_obj.browse(id).write(vals):
                     return {'success': True, 'errMsg': u'修改成功！'}
                 else:
                     return {'success': False, 'errMsg': u'修改失败！'}
@@ -741,12 +742,14 @@ class MobileController(http.Controller):
             # TODO odoo 返回的错误返回值不太固定，偶尔会有拦截不到的情况，还需进一步探索
             if isinstance(exc, basestring):
                 return {'success': False, 'errMsg': u'%s' % exc}
-            if exc and hasattr(exc, 'value'):
+            if exc and hasattr(exc, 'value') and exc.value:
                 return {'success': False, 'errMsg': u'%s' % exc.value}
-            if exc and hasattr(exc, 'message') and hasattr(exc, 'diag'):
+            if exc and hasattr(exc, 'message') and hasattr(exc, 'diag') and exc.message:
                 return {'success': False, 'errMsg': u'%s' % exc.diag.message_primary}
-            elif exc and hasattr(exc, 'message'):
+            elif exc and hasattr(exc, 'message') and exc.message:
                 return {'success': False, 'errMsg': u'%s' % exc.message}
+            elif exc and hasattr(exc, 'name') and exc.name:
+                return {'success': False, 'errMsg': u'%s' % exc.name}
 
     @http.route('/odoo/mobile/login', auth='public', type='json', method=['POST'])
     def login_mobile(self, **kwargs):
@@ -768,3 +771,4 @@ class MobileController(http.Controller):
         else:
             error = "Wrong login/password"
             return {'success': False, 'errMsg': error}
+        isinstance()

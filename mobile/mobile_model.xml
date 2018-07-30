@@ -99,7 +99,7 @@
                         <field name='is_show_edit_form' />
                         <field name='is_show_form_tree' />
                         <field name='group_ids' widget="many2many_tags"/>
-                        <field name='many_field' attrs="{'invisible':[('field_type', 'not in', ('many2many'))]}"/>
+                        <field name='many_field' attrs="{'invisible':[('field_type', 'not in', ('many2many', 'one2many'))]}"/>
                     </group>
                 </form>
             </field>
