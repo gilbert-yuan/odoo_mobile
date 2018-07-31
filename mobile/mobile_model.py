@@ -526,16 +526,17 @@ class MobileController(http.Controller):
                 getattr(model_row, method)()
                 return simplejson.dumps({'success': True})
             except Exception as exc:
+                # TODO odoo 返回的错误返回值不太固定，偶尔会有拦截不到的情况，还需进一步探索
                 if isinstance(exc, basestring):
                     return simplejson.dumps({'success': False, 'errMsg': u'%s' % exc})
-                if exc and hasattr(exc, 'value'):
+                if exc and hasattr(exc, 'value') and exc.value:
                     return simplejson.dumps({'success': False, 'errMsg': u'%s' % exc.value})
-                if exc and hasattr(exc, 'message') and hasattr(exc, 'diag'):
+                if exc and hasattr(exc, 'message') and hasattr(exc, 'diag') and exc.message:
                     return simplejson.dumps({'success': False, 'errMsg': u'%s' % exc.diag.message_primary})
-                elif exc and hasattr(exc, 'message'):
+                elif exc and hasattr(exc, 'message') and exc.message:
                     return simplejson.dumps({'success': False, 'errMsg': u'%s' % exc.message})
-                elif exc and hasattr(exc, dict):
-                    return simplejson.dumps({'success': False, 'errMsg': u'%s' % exc.get('message')})
+                elif exc and hasattr(exc, 'name') and exc.name:
+                    return simplejson.dumps({'success': False, 'errMsg': u'%s' % exc.name})
         else:
             return simplejson.dumps({'success': False, 'errMsg': u'%s' % '参数错误'})
 
@@ -680,7 +681,7 @@ class MobileController(http.Controller):
         """
         dict_val = {}
         for val in vals:
-            if val.get('type') in ('text', 'char', 'date', 'selection', 'boolean') \
+            if val.get('type') in ('text', 'char', 'date', 'selection') \
                     and val.get('name') != 'id' and val.get('value'):
                 dict_val.update({val.get('name'): val.get('value')})
             elif val.get('type') in ['datetime'] and val.get('value') :
@@ -709,6 +710,8 @@ class MobileController(http.Controller):
                 dict_val.update({val.get('name'): line_vals})
             elif val.get('type') in ['many2many'] and val.get('value'):
                 dict_val.update({val.get('name'): [(6, 0, val.get('value', []))]})
+            elif  val.get('value', 'default_val') != 'default_val' and val.get('type') in ['boolean']:
+                dict_val.update({val.get('name'): val.get('value')})
             if not val.get('value'):
                 continue
         return dict_val
