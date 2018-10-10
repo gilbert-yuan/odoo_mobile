@@ -9,6 +9,7 @@ import copy
 import datetime
 from openerp.tools import float_round
 import tempfile
+from odoo_pyechart import Bar, Pie, Line, Scatter, Style
 import os
 from dateutil.relativedelta import relativedelta
 
@@ -182,3 +183,165 @@ class MobileGrid(osv.osv):
         'group_ids': fields.many2many('res.groups', 'mobile_groups_rel', 'grid_id', 'group_id', string='用户组'),
 
     }
+
+class GraphViewOverView(osv.osv):
+    _name = 'graph.view.over.view'
+
+    def get_pie_style(self, base_style, view_row):
+        return dict(base_style, **dict(radius=eval(view_row['radius']),
+                                       center=view_row['center'],
+                                       is_random=view_row['is_random'],
+                                       rosetype=view_row['rosetype'] or '',
+                                       ))
+
+    def get_line_style(self, base_style, view_row):
+        return dict(base_style, **dict(mark_line=eval(view_row['mark_line'] or '[]'),
+                                       is_smooth=view_row['is_smooth'],
+                                       is_fill=view_row['is_fill'],
+                                       line_opacity=view_row['line_opacity'],
+                                       area_opacity=view_row['area_opacity'],
+                                       symbol=view_row['symbol'],
+                                       symbol_size=view_row['symbol_size'],
+                                       mark_point=eval(view_row['mark_point'] or '[]'),
+                                       is_step=view_row['is_step'],
+                                       mark_point_symbol=view_row['mark_point_symbol'],
+                                       mark_point_textcolor=view_row['mark_point_textcolor'],
+                                       ))
+
+    def get_bar_style(self, base_style, view_row):
+        return dict(base_style, **dict(mark_point=eval(view_row['mark_point'] or '[]'),
+                                       bar_category_gap=view_row['bar_category_gap'],
+                                       mark_line=eval(view_row['mark_line'] or '[]'),
+                                       is_datazoom_show=view_row['is_datazoom_show'],
+                                       datazoom_type=view_row['datazoom_type'],
+                                       datazoom_range=view_row['datazoom_range'],
+                                       ))
+
+    def get_graph_type_style(self, view_row):
+        type_style = Style()
+        base_style = type_style.add(title_pos=view_row['title_pos'] or '',
+                                    width=view_row['width'] or '',
+                                    height=view_row['height'] or '',
+                                    is_label_show=view_row['is_label_show'] or '',
+                                    label_pos=view_row['label_pos'] or '',
+                                    legend_top=view_row['legend_top'] or '',
+                                    is_convert=view_row['is_convert'] or '',
+                                    label_text_color=view_row['label_text_color'] or ''
+                                    )
+        style_dict = {
+            'pie': self.get_pie_style(base_style, view_row),
+            'bar': self.get_bar_style(base_style, view_row),
+            'line': self.get_line_style(base_style, view_row)
+        }
+        return style_dict.get(view_row.view_type)
+
+    def _get_graph_view_html(self, cr, uid, ids, name, args, context=None):
+        res = {}
+        for view in self.browse(cr, uid, ids, context=context):
+            res[view.id] = ''
+            if not view.model_name:
+                continue
+            tempfd, tempname = tempfile.mkstemp('.html')
+            groupby = eval(view.groupby)
+            fields = eval(view.fields)
+            result = self.pool.get(view.model_name).read_group(cr, uid, eval(view.domain), fields=fields,
+                                                               groupby=groupby, orderby=view.orderby,
+                                                               limit=eval(view.limit), context=eval(view.context))
+            GraphType = graph_type.get(view.view_type)
+            GraphTypeStyle = self.get_graph_type_style(view)
+            graph = GraphType('')
+            attr, v1 = [], []
+            fields.remove(groupby[0])
+            for record_dict in result:
+                if isinstance(record_dict.get(groupby[0]), str):
+                    attr.append(record_dict.get(groupby[0]))
+                elif isinstance(record_dict.get(groupby[0]), tuple):
+                    attr.append(record_dict.get(groupby[0])[1])
+                if fields[0] in record_dict:
+                    v1.append(record_dict.get(fields[0]))
+            graph.add(u"商家A", attr, v1, **GraphTypeStyle)
+            graph.render(path=tempname)
+            with open(tempname, 'r') as graph_file:
+                res[view.id] = graph_file.read()
+            os.unlink(tempname)
+        return res
+
+    _columns = {
+        'view_title': fields.char(u'视图的标题'),
+        'view_type': fields.selection([('line', '折线图'),
+                                       ('pie', '饼状图'),
+                                       ('bar', '条形图'),
+                                       ('scatter', '散点图')], string='视图类型'),
+        'model_name': fields.char('模型'),
+        'domain': fields.char('Domain'),
+        'fields': fields.char('Fields'),
+        'groupby': fields.char('GroupBy'),
+        'orderby': fields.char("OrderBy"),
+        'limit': fields.char("limit"),
+        'context': fields.char("context"),
+        'html': fields.function(_get_graph_view_html, type='text', string='视图总览'),
+        # graph options
+        'is_label_show': fields.boolean('is_label_show'),
+        'is_stack': fields.boolean('is_stack'),
+        'is_toolbox_show': fields.boolean('is_toolbox_show'),
+        'title_pos': fields.char('title_pos'),
+        'width': fields.float('width'),
+        'height': fields.float('height'),
+        'center': fields.char('center'),
+        'radius': fields.char('radius'),
+        'mark_point_symbol': fields.char('mark_point_symbol'),
+        'symbol': fields.char('symbol'),
+        'legend_top': fields.char('legend_top'),
+        'label_pos': fields.char('label_pos'),
+        'mark_point_textcolor': fields.char('mark_point_textcolor'),
+        'bar_category_gap': fields.integer('bar_category_gap'),
+        'symbol_size': fields.integer('symbol_size'),
+        'line_opacity': fields.integer('line_opacity'),
+        'area_opacity': fields.integer('area_opacity'),
+        'is_convert': fields.boolean('is_convert'),
+        'is_datazoom_show': fields.boolean('is_datazoom_show'),
+        'mark_point': fields.char('mark_point', help='["average"]'),
+        'mark_line': fields.char('mark_line', help='["min", "max"]'),
+        'label_text_color': fields.char('label_text_color'),
+        'is_random': fields.boolean('is_random'),
+        'is_smooth': fields.boolean('is_smooth'),
+        'datazoom_type': fields.boolean('datazoom_type', help="slider"),
+        'is_fill': fields.boolean('is_fill', help="is_fill"),
+        'is_step': fields.boolean('is_step', help="is_step"),
+        'datazoom_range': fields.char('datazoom_range', help="[10, 25]"),
+        'rosetype': fields.selection([('radius', 'radius'), ('area', 'area')], 'rosetype'),
+        'legend_orient': fields.selection([('vertical', 'vertical'), ('horizontal', 'horizontal')], 'legend_orient'),
+    }
+
+    _defaults = {
+        'domain': '[]',
+        'fields': '[]',
+        'groupby': '[]',
+        'radius': '[]',
+        'rosetype': 'area',
+        'center': '[]',
+        'orderby': 'id DESC',
+        'limit': '10',
+        'context': '{}',
+        'is_label_show': True,
+        'is_toolbox_show': True,
+        'is_convert': True,
+        'is_datazoom_show': True,
+        'datazoom_type': 'slider',
+        'datazoom_range': '[10, 25]',
+        'title_pos': '',
+        'rosetype': 'radius',
+        'legend_orient': 'horizontal',
+        'width': 400,
+        'height': 300,
+        'center': '',
+        'radius': "[]",
+    }
+
+
+graph_type = {
+    'bar': Bar,
+    'pie': Pie,
+    'line': Line,
+    'scatter': Scatter,
+}
