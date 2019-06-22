@@ -1,7 +1,7 @@
 # coding=utf-8
 # -*- coding: utf-8 -*-
 import jinja2, sys, os
-import simplejson, odoo
+import json, odoo
 from odoo.addons.web.controllers.main import ensure_db
 from odoo import http
 from odoo.http import request
@@ -84,7 +84,7 @@ class MobileView(models.Model):
 class One2ManyField(models.Model):
     _name = 'one.many.field'
 
-    mobile_field_ids = fields.Many2many('mobile.field', 'view_id', string=u'视图表'),
+    mobile_field_ids = fields.Many2many('mobile.field', 'view_id', string=u'视图表')
 
 
 class MobileDomain(models.Model):
@@ -164,10 +164,11 @@ class MobileController(http.Controller):
         template = env.get_template("index.html")
         return template.render()
 
-    @http.route('/odoo/mobile/get/all/grid_data', auth='user', type='http', method=['GET'])
-    def get_all_grid_data(self, **args):
+    @http.route('/odoo/mobile/get/all/grid_data', auth='none', type='json', csrf=False)
+    def get_all_grid_data(self, *args, **kwargs):
+        print SUPERUSER_ID
         uid = request.session.get('uid') or SUPERUSER_ID
-        grid_obj = request.env['mobile.grid']
+        grid_obj = request.env['mobile.grid'].sudo()
         allGridData = {}
         for grid in grid_obj.search([]):
             allGridData.setdefault(grid.label_id, []).append({
@@ -178,13 +179,13 @@ class MobileController(http.Controller):
         gridList = [{'groupTitle': label.name, 'sequence': label.sequence,
                      'gridCols': 4, 'gridRow': row} for label, row in allGridData.iteritems()]
         gridList = sorted(gridList, key=lambda grid: grid.get('sequence'))
-        return simplejson.dumps(gridList)
+        return gridList
 
-    @http.route('/odoo/mobile/get/action/views', auth='user', type='http', method=['GET'])
+    @http.route('/odoo/mobile/get/action/views', auth='none', type='json', csrf=False)
     def get_action_views(self, **args):
         action_id = int(args.get('actionId', 0))
         uid = request.session.get('uid') or SUPERUSER_ID
-        action_row = request.env['mobile.action'].browse(action_id)
+        action_row = request.env['mobile.action'].sudo().browse(action_id)
         views_data = [{'title': domain.name,
                        'sequence': domain.sequence,
                        'domain': domain.domain} for domain in action_row.mobile_view_id.domain_ids]
@@ -202,9 +203,9 @@ class MobileController(http.Controller):
             'viewsData': views_data,
             'view_type': view_type.get(action_row.mobile_view_id.view_type)
         }
-        return simplejson.dumps(return_val)
+        return return_val
 
-    @http.route('/odoo/mobile/get/list/view/data', auth='user', type='http', method=['GET'])
+    @http.route('/odoo/mobile/get/list/view/data', auth='none', type='json', csrf=False)
     def get_action_form_pre_view(self, **args):
         action_id = int(args.get('actionId', '0'))
         offset = int(args.get('offset', '0'))
@@ -213,17 +214,17 @@ class MobileController(http.Controller):
         domain = eval(args.get('domain', '[]'))
         view_id = int(args.get('view_id', '0'))
         if not args.get('model'):
-            return simplejson.dumps({})
+            return json.dumps({})
         model_name = args.get('model')
         if not model_name:
-            return simplejson.dumps({})
+            return json.dumps({})
         uid = request.session.get('uid') or SUPERUSER_ID
-        record_rows = request.env[model_name].search(domain, offset=offset, limit=limit, order=order)
+        record_rows = request.env[model_name].sudo().search(domain, offset=offset, limit=limit, order=order)
         return_val = []
-        for view_row in request.env['mobile.view'].browse(view_id):
+        for view_row in request.env['mobile.view'].sudo().browse(view_id):
             return_val = self.get_view_type_function(view_row.view_type)(view_row, record_rows, model_name)
-            return simplejson.dumps(return_val)
-        return simplejson.dumps(return_val)
+            return return_val
+        return return_val
 
     def get_view_type_function(self, type):
         type_dict = {
@@ -252,7 +253,7 @@ class MobileController(http.Controller):
             all_field.append(self.get_all_field_setting(field))
         for button in view_row.button_ids:
             domain = eval(button.show_condition or '[]') + [('id', 'in', [record.id for record in record_rows])]
-            mode_ids = request.env[model_name].search(domain)
+            mode_ids = request.env[model_name].sudo().search(domain)
             all_field.append({
                 'title': button.name,
                 'type': 'button',
@@ -281,7 +282,7 @@ class MobileController(http.Controller):
             all_field.append(self.get_all_field_setting(field))
         for button in view_row.button_ids:
             domain = eval(button.show_condition or '[]') + [('id', 'in', [record.id for record in record_rows])]
-            mode_ids = request.env[model_name].search(domain)
+            mode_ids = request.env[model_name].sudo().search(domain)
             all_field.append({
                 'title': button.name,
                 'type': 'button',
@@ -318,7 +319,7 @@ class MobileController(http.Controller):
             return_value.update({'value': value,
                                  'ids': ids,
                                  'table': self.get_record_one2many(record, field,
-                                                                   context=dict(self._context, **{'table': True}))
+                                                                   context={'table': True})
                                  })
         elif field.get('type') == 'selection':
             value = self.card_field_type_get_val(record, field)
@@ -329,7 +330,7 @@ class MobileController(http.Controller):
 
         return return_value
 
-    def get_show_tree_one2many(self, uid, record, field, context=None):
+    def get_show_tree_one2many(self, record, field):
         all_tree_row, table_body, line_ids = [], [], []
         many_field = field.get('many_field', [])
         if not (many_field and field.get('name')):
@@ -370,7 +371,7 @@ class MobileController(http.Controller):
             return value
         return ''
 
-    def get_record_one2many(self,record, field):
+    def get_record_one2many(self,record, field, context={}):
         table_header, table_body = [], []
         many_field = field.get('many_field', [])
         if not (many_field and field.get('name')):
@@ -385,29 +386,29 @@ class MobileController(http.Controller):
         return {'tableTh': table_header, 'tableBody': table_body}
 
     # /odoo/button/method
-    @http.route('/odoo/mobile/button/method', auth='user', type='http', method=['GET'])
+    @http.route('/odoo/mobile/button/method', auth='none', type='json', csrf=False)
     def mobile_button_method(self, **args):
         cr, context, pool = request.cr, request.context, request.registry
         uid = request.session.get('uid') or SUPERUSER_ID
         model = args.get('model')
         method = args.get('method')
         ids = int(args.get('ids'))
-        model_obj = request.env[model].browse(ids)
+        model_obj = request.env[model].sudo().browse(ids)
         if model_obj and hasattr(model_obj, method) and ids:
             try:
                 getattr(model_obj, method)(ids)
-                return simplejson.dumps({'success': True})
+                return json.dumps({'success': True})
             except Exception as exc:
                 if isinstance(exc, basestring):
-                    return simplejson.dumps({'success': False, 'errMsg': u'%s' % exc})
+                    return json.dumps({'success': False, 'errMsg': u'%s' % exc})
                 if exc and hasattr(exc, 'value'):
-                    return simplejson.dumps({'success': False, 'errMsg': u'%s' % exc.value})
+                    return json.dumps({'success': False, 'errMsg': u'%s' % exc.value})
                 if exc and hasattr(exc, 'message') and hasattr(exc, 'diag'):
-                    return simplejson.dumps({'success': False, 'errMsg': u'%s' % exc.diag.message_primary})
+                    return json.dumps({'success': False, 'errMsg': u'%s' % exc.diag.message_primary})
                 elif exc and hasattr(exc, 'message'):
-                    return simplejson.dumps({'success': False, 'errMsg': u'%s' % exc.message})
+                    return json.dumps({'success': False, 'errMsg': u'%s' % exc.message})
                 elif exc and hasattr(exc, dict):
-                    return simplejson.dumps({'success': False, 'errMsg': u'%s' % exc.get('message')})
+                    return json.dumps({'success': False, 'errMsg': u'%s' % exc.get('message')})
 
     def get_many_field_value(self, field):
         field_value = self.get_all_field_setting(field)
@@ -426,7 +427,7 @@ class MobileController(http.Controller):
     
     def get_form_view_data(self, view_row, record_ids, model_name):
         all_field = []
-        default_val = request.env[model_name].default_get([field.ir_field.name for field
+        default_val = request.env[model_name].sudo().default_get([field.ir_field.name for field
                                                                  in view_row.mobile_field_ids])
         for field in view_row.mobile_field_ids:
             field_value = self.get_all_field_setting(field)
@@ -464,20 +465,20 @@ class MobileController(http.Controller):
         return {'fieldVals': all_field, 'id': 0}
 
     # /odoo/form/view/data
-    @http.route('/odoo/mobile/form/view/data', auth='user', type='http', method=['GET'])
+    @http.route('/odoo/mobile/form/view/data', auth='none', type='json', csrf=False)
     def get_odoo_view_data(self, **args):
         cr, context, pool = request.cr, request.context, request.registry
         uid = request.session.get('uid') or SUPERUSER_ID
         model_name = args.get('model', '')
         view_id = int(args.get('viewId', '0'))
         id = int(args.get('id', '0'))
-        view_row = pool.get('mobile.view').browse(cr, uid, view_id, context=context)
+        view_row = pool.get('mobile.view').sudo().browse(cr, uid, view_id, context=context)
         return_val = {}
         if model_name:
             return_val = self.get_form_view_data(view_row.show_form_view, id, model_name)
-        return simplejson.dumps(return_val)
+        return return_val
 
-    @http.route('/odoo/mobile/model/name_search', auth='user', type='http', method=['GET'])
+    @http.route('/odoo/mobile/model/name_search', auth='none', type='json', csrf=False )
     def get_odoo_model_name_search(self, **args):
         cr, context, pool = request.cr, request.context, request.registry
         uid = request.session.get('uid') or SUPERUSER_ID
@@ -495,7 +496,7 @@ class MobileController(http.Controller):
                 return_ids = getattr(model_row, 'search')(cr, uid, domain, limit=limit, context=context)
                 return_val = getattr(model_row, 'name_get')(cr, uid, return_ids, context=context)
             return_val_list_dict = [{'key': val[0], 'value': val[1]} for val in return_val]
-        return simplejson.dumps(return_val_list_dict)
+        return return_val_list_dict
 
     def construct_model_vals(self, id, vals):
         dict_val = {}
@@ -532,7 +533,7 @@ class MobileController(http.Controller):
                 dict_val.update({val.get('name'): [(6, 0, val.get('value', []))]})
         return dict_val
 
-    @http.route('/odoo/mobile/save/record', auth='user', type='json', method=['POST'])
+    @http.route('/odoo/mobile/save/record', auth='none', type='json', csrf=False)
     def create_new_record(self, **args):
         uid = request.session.get('uid') or SUPERUSER_ID
         model = request.jsonrequest.get('model')
@@ -543,10 +544,10 @@ class MobileController(http.Controller):
         try:
             if not id:
                 vals.update(context_val.get('default_vals', {}))
-                request.env[model].create(vals)
+                request.env[model].sudo().create(vals)
                 return {'success': True, 'errMsg': u'创建成功！'}
             else:
-                request.env[model].browse(id).write(vals)
+                request.env[model].sudo().browse(id).write(vals)
                 return {'success': True, 'errMsg': u'修改成功！'}
         except Exception as exc:
             if isinstance(exc, basestring):
@@ -558,16 +559,17 @@ class MobileController(http.Controller):
             elif exc and hasattr(exc, 'message'):
                 return {'success': False, 'errMsg': u'%s' % exc.message}
 
-    @http.route('/odoo/mobile/login', auth='public', type='json', method=['POST'])
-    def login_mobile(self, **kwargs):
-        name = request.jsonrequest.get('name')
-        password = request.jsonrequest.get('password')
+    @http.route('/odoo/mobile/login', auth='public', type='json', csrf=False)
+    def login_mobile(self, *args, **kwargs):
+        print kwargs
+        name = kwargs.get('name')
+        password = kwargs.get('password')
         ensure_db()
         if not request.uid:
             request.uid = odoo.SUPERUSER_ID
-        uid = request.env['res.users'].authenticate(request.db, name, password, None)
+        uid = request.env['res.users'].sudo().authenticate(request.db, name, password, None)
         if uid:
             return {'success': True, 'errMsg': u'登录成功！', 'uid': uid}
         else:
             error = "Wrong login/password"
-            return {'success': False, 'errMsg': error}
+            return  {'success': False, 'errMsg': error}
