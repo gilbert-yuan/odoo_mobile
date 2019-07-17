@@ -164,7 +164,7 @@ class MobileController(http.Controller):
         template = env.get_template("index.html")
         return template.render()
 
-    @http.route('/odoo/mobile/get/all/grid_data', auth='none', type='json', csrf=False)
+    @http.route('/odoo/mobile/get/all/grid_data', auth='none', type='http', methods=['GET'], csrf=False)
     def get_all_grid_data(self, *args, **kwargs):
         print SUPERUSER_ID
         uid = request.session.get('uid') or SUPERUSER_ID
@@ -179,9 +179,9 @@ class MobileController(http.Controller):
         gridList = [{'groupTitle': label.name, 'sequence': label.sequence,
                      'gridCols': 4, 'gridRow': row} for label, row in allGridData.iteritems()]
         gridList = sorted(gridList, key=lambda grid: grid.get('sequence'))
-        return gridList
+        return json.dumps(gridList)
 
-    @http.route('/odoo/mobile/get/action/views', auth='none', type='json', csrf=False)
+    @http.route('/odoo/mobile/get/action/views', auth='none', type='http', methods=['GET'],csrf=False)
     def get_action_views(self, **args):
         action_id = int(args.get('actionId', 0))
         uid = request.session.get('uid') or SUPERUSER_ID
@@ -203,9 +203,9 @@ class MobileController(http.Controller):
             'viewsData': views_data,
             'view_type': view_type.get(action_row.mobile_view_id.view_type)
         }
-        return return_val
+        return json.dumps(return_val)
 
-    @http.route('/odoo/mobile/get/list/view/data', auth='none', type='json', csrf=False)
+    @http.route('/odoo/mobile/get/list/view/data', auth='none', type='http', methods=['GET'],csrf=False)
     def get_action_form_pre_view(self, **args):
         action_id = int(args.get('actionId', '0'))
         offset = int(args.get('offset', '0'))
@@ -223,8 +223,8 @@ class MobileController(http.Controller):
         return_val = []
         for view_row in request.env['mobile.view'].sudo().browse(view_id):
             return_val = self.get_view_type_function(view_row.view_type)(view_row, record_rows, model_name)
-            return return_val
-        return return_val
+            return json.dumps(return_val)
+        return json.dumps(return_val)
 
     def get_view_type_function(self, type):
         type_dict = {
@@ -386,7 +386,7 @@ class MobileController(http.Controller):
         return {'tableTh': table_header, 'tableBody': table_body}
 
     # /odoo/button/method
-    @http.route('/odoo/mobile/button/method', auth='none', type='json', csrf=False)
+    @http.route('/odoo/mobile/button/method', auth='none', type='http', methods=['GET'],csrf=False)
     def mobile_button_method(self, **args):
         cr, context, pool = request.cr, request.context, request.registry
         uid = request.session.get('uid') or SUPERUSER_ID
@@ -465,7 +465,7 @@ class MobileController(http.Controller):
         return {'fieldVals': all_field, 'id': 0}
 
     # /odoo/form/view/data
-    @http.route('/odoo/mobile/form/view/data', auth='none', type='json', csrf=False)
+    @http.route('/odoo/mobile/form/view/data', auth='none', type='http', methods=['GET'],csrf=False)
     def get_odoo_view_data(self, **args):
         cr, context, pool = request.cr, request.context, request.registry
         uid = request.session.get('uid') or SUPERUSER_ID
@@ -476,9 +476,9 @@ class MobileController(http.Controller):
         return_val = {}
         if model_name:
             return_val = self.get_form_view_data(view_row.show_form_view, id, model_name)
-        return return_val
+        return json.dumps(return_val)
 
-    @http.route('/odoo/mobile/model/name_search', auth='none', type='json', csrf=False )
+    @http.route('/odoo/mobile/model/name_search', auth='none', type='http', methods=['GET'],csrf=False )
     def get_odoo_model_name_search(self, **args):
         cr, context, pool = request.cr, request.context, request.registry
         uid = request.session.get('uid') or SUPERUSER_ID
@@ -496,7 +496,7 @@ class MobileController(http.Controller):
                 return_ids = getattr(model_row, 'search')(cr, uid, domain, limit=limit, context=context)
                 return_val = getattr(model_row, 'name_get')(cr, uid, return_ids, context=context)
             return_val_list_dict = [{'key': val[0], 'value': val[1]} for val in return_val]
-        return return_val_list_dict
+        return json.dumps(return_val_list_dict)
 
     def construct_model_vals(self, id, vals):
         dict_val = {}
