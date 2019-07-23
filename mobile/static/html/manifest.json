@@ -1,0 +1,22 @@
+{
+    "scope": "/",
+    "name": "运维平台",
+    "short_name": "运维平台",
+    "start_url": "/",
+    "display": "standalone",
+    "description": "Gomo运维平台",
+    "orientation": "portrait",
+    "theme_color": "#3f51b5",
+    "background_color": "#fff",
+    "icons": [{
+      "src": "./vue_logo.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "./logo.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    }
+    ]
+}

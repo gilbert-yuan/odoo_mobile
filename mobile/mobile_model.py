@@ -16,10 +16,10 @@ SUPERUSER_ID = 1
 
 if hasattr(sys, 'frozen'):
     # When running on compiled windows binary, we don't have access to package loader.
-    path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'html'))
+    path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'static'))
     loader = jinja2.FileSystemLoader(path)
 else:
-    loader = jinja2.PackageLoader('odoo.addons.mobile', "")
+    loader = jinja2.PackageLoader('odoo.addons.mobile', "static")
 
 env = jinja2.Environment('<%', '%>', '${', '}', '%', loader=loader, autoescape=True)
 
