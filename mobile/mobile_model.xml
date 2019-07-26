@@ -74,8 +74,6 @@
                     <field name='readonly' />
                     <field name='required' />
                     <field name='invisible' />
-                    <field name='is_show_edit_form' />
-                    <field name='is_show_form_tree' />
                 </tree>
             </field>
         </record>
@@ -93,8 +91,8 @@
                         <field name='readonly' />
                         <field name='required' />
                         <field name='invisible' />
-                        <field name='is_show_edit_form' />
-                        <field name='is_show_form_tree' />
+                        <!-- <field name='is_show_edit_form' /> -->
+                        <!-- <field name='is_show_form_tree' /> -->
                         <field name='many_field' />
                     </group>
                 </form>

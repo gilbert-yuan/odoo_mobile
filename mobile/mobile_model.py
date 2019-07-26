@@ -127,8 +127,8 @@ class MobileField(models.Model):
     required = fields.Boolean(u'必输', copy=True)
     readonly = fields.Boolean(u'只读', copy=True)
     invisible = fields.Boolean(u'不可见', copy=True)
-    is_show_edit_form = fields.Boolean(u'form不可见', copy=True)
-    is_show_form_tree = fields.Boolean(u'tree不可见', copy=True)
+    #is_show_edit_form = fields.Boolean(u'form不可见', copy=True)
+    #is_show_form_tree = fields.Boolean(u'tree不可见', copy=True)
     field_id = fields.Many2one('mobile.field', 'field_id', copy=True)
     many_field = fields.One2many('mobile.field', 'field_id', string='one2many', copy=True)
 
@@ -237,8 +237,6 @@ class MobileController(http.Controller):
         return {
             'title': field.ir_field.field_description,
             'type': field.field_type,
-            'is_show_edit_form': field.is_show_edit_form,
-            'is_show_form_tree': field.is_show_form_tree,
             'value': '',
             'required': field.required,
             'readonly': field.readonly,
@@ -327,7 +325,6 @@ class MobileController(http.Controller):
                                  'options': [{'key': value[0], 'value': value[1]} for value in
                                              record._fields[field.get('name')].selection]
                                  })
-
         return return_value
 
     def get_show_tree_one2many(self, record, field):
