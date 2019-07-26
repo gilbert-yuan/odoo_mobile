@@ -388,7 +388,6 @@ class MobileController(http.Controller):
     # /odoo/button/method
     @http.route('/odoo/mobile/button/method', auth='none', type='http', methods=['GET'],csrf=False)
     def mobile_button_method(self, **args):
-        cr, context, pool = request.cr, request.context, request.registry
         uid = request.session.get('uid') or SUPERUSER_ID
         model = args.get('model')
         method = args.get('method')
@@ -467,12 +466,11 @@ class MobileController(http.Controller):
     # /odoo/form/view/data
     @http.route('/odoo/mobile/form/view/data', auth='none', type='http', methods=['GET'],csrf=False)
     def get_odoo_view_data(self, **args):
-        cr, context, pool = request.cr, request.context, request.registry
         uid = request.session.get('uid') or SUPERUSER_ID
         model_name = args.get('model', '')
         view_id = int(args.get('viewId', '0'))
         id = int(args.get('id', '0'))
-        view_row = pool.get('mobile.view').sudo().browse(cr, uid, view_id, context=context)
+        view_row = request.env['mobile.view'].sudo().browse(view_id)
         return_val = {}
         if model_name:
             return_val = self.get_form_view_data(view_row.show_form_view, id, model_name)
@@ -480,13 +478,12 @@ class MobileController(http.Controller):
 
     @http.route('/odoo/mobile/model/name_search', auth='none', type='http', methods=['GET'],csrf=False )
     def get_odoo_model_name_search(self, **args):
-        cr, context, pool = request.cr, request.context, request.registry
         uid = request.session.get('uid') or SUPERUSER_ID
         model_name = args.get('model')
         limit = int(args.get('limit', '15'))
         value = args.get('value', '')
         domain = eval(args.get('domain', '[]'))
-        model_row = pool.get(model_name)
+        model_row = request.env[model_name]
         return_val_list_dict = []
         if model_row:
             if value:
