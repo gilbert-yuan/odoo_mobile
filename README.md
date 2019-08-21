@@ -1,5 +1,6 @@
 ![996.icu](https://img.shields.io/badge/link-996.icu-red.svg)
 # odoo_mobile 
+# master 分支为最新的代码 10.0的。
 ## 图文演示 http://blog.sina.com.cn/s/blog_bc7dee2d0102xrl7.html
 对应的前端VUX 项目 https://github.com/gilbert-yuan/odoo_mobile_test
 vux 实现对接odoo 配置出手机端 ()
