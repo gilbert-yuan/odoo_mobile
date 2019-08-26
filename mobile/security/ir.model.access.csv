@@ -1,9 +1,9 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-group_user_model_mobile_grid_label,group_user_model_mobile_grid_label,model_mobile_grid_label,base.group_user,1,0,0,0
-group_user_model_mobile_action,group_user_model_mobile_action,model_mobile_action,base.group_user,1,0,0,0
-group_user_model_mobile_view,group_user_model_mobile_view,model_mobile_view,base.group_user,1,0,0,0
-group_user_model_one_many_field,group_model_one_many_field,model_one_many_field,base.group_user,1,0,0,0
-group_user_model_mobile_domain,group_user_model_mobile_domain,model_mobile_domain,base.group_user,1,0,0,0
-group_user_model_mobile_button,group_user_model_mobile_button,model_mobile_button,base.group_user,1,0,0,0
-group_user_model_mobile_field,group_user_model_mobile_field,model_mobile_field,base.group_user,1,0,0,0
-group_user_model_mobile_grid,group_user_model_mobile_grid,model_mobile_grid,base.group_user,1,0,0,0
+group_user_model_mobile_grid_label,group_user_model_mobile_grid_label,model_mobile_grid_label,base.group_user,1,1,1,0
+group_user_model_mobile_action,group_user_model_mobile_action,model_mobile_action,base.group_user,1,1,1,0
+group_user_model_mobile_view,group_user_model_mobile_view,model_mobile_view,base.group_user,1,1,1,0
+group_user_model_one_many_field,group_model_one_many_field,model_one_many_field,base.group_user,1,1,1,0
+group_user_model_mobile_domain,group_user_model_mobile_domain,model_mobile_domain,base.group_user,1,1,1,0
+group_user_model_mobile_button,group_user_model_mobile_button,model_mobile_button,base.group_user,1,1,1,0
+group_user_model_mobile_field,group_user_model_mobile_field,model_mobile_field,base.group_user,1,1,1,0
+group_user_model_mobile_grid,group_user_model_mobile_grid,model_mobile_grid,base.group_user,1,1,1,0
