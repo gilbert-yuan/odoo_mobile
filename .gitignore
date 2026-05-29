@@ -1,3 +1,4 @@
 *.py[co]
 .*
 !.gitignore
+odoo_mobile_test

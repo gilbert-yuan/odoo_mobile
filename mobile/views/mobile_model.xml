@@ -293,6 +293,68 @@
         </record>
         <menuitem id="dtfg_menu_mobile_setting_api" name="接口配置" parent="dtfg_menu_mobile_setting" action="mobile_api_config_action"/>
 
+        <record id="mobile_chart_config_list" model="ir.ui.view">
+            <field name="name">mobile.chart.config.list</field>
+            <field name="model">mobile.chart.config</field>
+            <field name="arch" type="xml">
+                <list string="移动图表配置" editable="bottom">
+                    <field name="sequence" widget="handle"/>
+                    <field name="active"/>
+                    <field name="name"/>
+                    <field name="chart_code"/>
+                    <field name="chart_type"/>
+                    <field name="model_id"/>
+                    <field name="group_by"/>
+                    <field name="measure_type"/>
+                    <field name="measure_field_id"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="mobile_chart_config_form" model="ir.ui.view">
+            <field name="name">mobile.chart.config.form</field>
+            <field name="model">mobile.chart.config</field>
+            <field name="arch" type="xml">
+                <form string="移动图表配置">
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="active"/>
+                                <field name="sequence"/>
+                                <field name="name"/>
+                                <field name="chart_code"/>
+                                <field name="chart_type"/>
+                            </group>
+                            <group>
+                                <field name="model_id"/>
+                                <field name="date_field_id" domain="[('model_id', '=', model_id), ('ttype', 'in', ['date', 'datetime'])]"/>
+                                <field name="person_field_id" domain="[('model_id', '=', model_id), ('ttype', '=', 'many2one'), ('relation', '=', 'res.users')]"/>
+                                <field name="group_by"/>
+                                <field name="measure_type"/>
+                                <field name="measure_field_id" domain="[('model_id', '=', model_id), ('ttype', 'in', ['integer', 'float', 'monetary'])]"/>
+                            </group>
+                        </group>
+                        <group>
+                            <field name="state_field"/>
+                            <field name="done_states"/>
+                            <field name="y_axis_name"/>
+                            <field name="description"/>
+                        </group>
+                        <group>
+                            <field name="base_domain" placeholder="[]"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="mobile_chart_config_action" model="ir.actions.act_window">
+            <field name="name">图表配置</field>
+            <field name="res_model">mobile.chart.config</field>
+            <field name="view_mode">list,form</field>
+        </record>
+        <menuitem id="dtfg_menu_mobile_setting_chart" name="图表配置" parent="dtfg_menu_mobile_setting" action="mobile_chart_config_action"/>
+
         <record id="mobile_sample_generator_form" model="ir.ui.view">
             <field name="name">mobile.sample.generator.form</field>
             <field name="model">mobile.sample.generator</field>
@@ -301,6 +363,7 @@
                     <group>
                         <group string="模块">
                             <field name="include_sale"/>
+                            <field name="include_sale_chart_data" invisible="not include_sale"/>
                             <field name="include_purchase"/>
                             <field name="include_inventory"/>
                             <field name="include_account"/>
@@ -314,6 +377,7 @@
                     </group>
                     <footer>
                         <button name="action_generate" type="object" string="生成/更新示例配置" class="btn-primary"/>
+                        <button name="action_clear" type="object" string="一键清除示例" class="btn-secondary" confirm="确认清除官方模块示例配置吗？"/>
                         <button string="关闭" class="btn-secondary" special="cancel"/>
                     </footer>
                 </form>
@@ -327,5 +391,41 @@
             <field name="target">new</field>
         </record>
         <menuitem id="dtfg_menu_mobile_sample_generator" name="生成官方模块示例" parent="dtfg_menu_mobile_setting" action="mobile_sample_generator_action"/>
+
+        <record id="mobile_quick_config_wizard_form" model="ir.ui.view">
+            <field name="name">mobile.quick.config.wizard.form</field>
+            <field name="model">mobile.quick.config.wizard</field>
+            <field name="arch" type="xml">
+                <form string="手机视图快速配置">
+                    <group>
+                        <group string="基础参数">
+                            <field name="name"/>
+                            <field name="model_id"/>
+                            <field name="label_id"/>
+                            <field name="view_type"/>
+                            <field name="with_form"/>
+                            <field name="field_limit"/>
+                        </group>
+                        <group string="附加选项">
+                            <field name="include_buttons"/>
+                            <field name="include_delete_button"/>
+                            <field name="result" readonly="1" nolabel="1"/>
+                        </group>
+                    </group>
+                    <footer>
+                        <button name="action_generate" type="object" string="生成配置" class="btn-primary"/>
+                        <button string="关闭" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <record id="mobile_quick_config_wizard_action" model="ir.actions.act_window">
+            <field name="name">快速配置</field>
+            <field name="res_model">mobile.quick.config.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+        </record>
+        <menuitem id="dtfg_menu_mobile_quick_config" name="快速配置" parent="dtfg_menu_mobile_setting" action="mobile_quick_config_wizard_action"/>
     </data>
 </odoo>
