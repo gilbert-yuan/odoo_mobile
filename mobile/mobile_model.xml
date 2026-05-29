@@ -1,225 +1,324 @@
 <?xml version="1.0" encoding="utf-8"?>
-<openerp>
+<odoo>
     <data>
-        <menuitem id="dtfg_menu_mobile" name="手机视图" />
+        <menuitem id="dtfg_menu_mobile" name="手机视图"/>
         <menuitem id="dtfg_menu_mobile_setting" name="手机视图设置" parent="dtfg_menu_mobile"/>
-        <record id='weixin_mobile_grid_tree' model='ir.ui.view'>
-            <field name='name'>mobile.grid.tree</field>
-            <field name='model'>mobile.grid</field>
-            <field name='arch' type='xml'>
-                <tree string='手机菜单' editable='bottom'>
-                    <field name='label_id' />
-                    <field name='sequence'/>
-                    <field name='image'/>
-                    <field name='title' />
-                </tree>
+
+        <record id="weixin_mobile_grid_tree" model="ir.ui.view">
+            <field name="name">mobile.grid.list</field>
+            <field name="model">mobile.grid</field>
+            <field name="arch" type="xml">
+                <list string="手机菜单" editable="bottom">
+                    <field name="label_id"/>
+                    <field name="sequence"/>
+                    <field name="image"/>
+                    <field name="title"/>
+                </list>
             </field>
         </record>
         <record id="weixin_mobile_grid_action" model="ir.actions.act_window">
             <field name="name">Grid</field>
             <field name="res_model">mobile.grid</field>
-            <field name="view_type">form</field>
-             <field name="view_mode">tree</field>
-            <field name="help" type="html">
-              <p class="oe_view_nocontent_create">
-                Click to register new expenses.
-              </p><p>
-              </p>
-            </field>
+            <field name="view_mode">list</field>
         </record>
-        <menuitem id="dtfg_menu_mobile_setting_grid" name="Grid"
-                  parent="dtfg_menu_mobile_setting" action="weixin_mobile_grid_action"/>
+        <menuitem id="dtfg_menu_mobile_setting_grid" name="Grid" parent="dtfg_menu_mobile_setting" action="weixin_mobile_grid_action"/>
 
-        <record id='weixin_mobile_action_tree' model='ir.ui.view'>
-            <field name='name'>mobile action tree</field>
-            <field name='model'>mobile.action</field>
-            <field name='arch' type='xml'>
-                <tree string='action' editable='bottom'>
-                    <field name='model_id' />
-                    <field name='name' />
-                    <field name='limit'/>
-                    <field name='offset'/>
+        <record id="weixin_mobile_action_tree" model="ir.ui.view">
+            <field name="name">mobile.action.list</field>
+            <field name="model">mobile.action</field>
+            <field name="arch" type="xml">
+                <list string="action" editable="bottom">
+                    <field name="model_id"/>
+                    <field name="name"/>
+                    <field name="limit"/>
+                    <field name="offset"/>
                     <field name="order"/>
-                    <field name='context' />
-                    <field name='mobile_grid_id' />
-                </tree>
+                    <field name="context"/>
+                    <field name="mobile_grid_id"/>
+                </list>
             </field>
         </record>
         <record id="weixin_mobile_action_action" model="ir.actions.act_window">
-            <field name="name">action</field>
+            <field name="name">Action</field>
             <field name="res_model">mobile.action</field>
-            <field name="view_type">form</field>
-             <field name="view_mode">tree</field>
-            <field name="help" type="html">
-              <p class="oe_view_nocontent_create">
-                Click to register new expenses.
-              </p><p>
-              </p>
-            </field>
+            <field name="view_mode">list</field>
         </record>
-        <menuitem id="dtfg_menu_mobile_setting_action" name="Action"
-                  parent="dtfg_menu_mobile_setting" action="weixin_mobile_action_action"/>
+        <menuitem id="dtfg_menu_mobile_setting_action" name="Action" parent="dtfg_menu_mobile_setting" action="weixin_mobile_action_action"/>
 
-        <record id='weixin_mobile_field_tree' model='ir.ui.view'>
-            <field name='name'>mobile field tree</field>
-            <field name='model'>mobile.field</field>
-            <field name='arch' type='xml'>
-                <tree string='field'>
-                    <field name='sequence' />
-                    <field name='view_id' />
-                    <field name='ir_field' domain="[('model_id', '=', model_id)]"/>
-                    <field name='field_relation' />
-                    <field name='field_selection' />
-                    <field name='model_id' />
-                    <field name='readonly' />
-                    <field name='required' />
-                    <field name='invisible' />
-                </tree>
+        <record id="weixin_mobile_field_tree" model="ir.ui.view">
+            <field name="name">mobile.field.list</field>
+            <field name="model">mobile.field</field>
+            <field name="arch" type="xml">
+                <list string="field">
+                    <field name="sequence"/>
+                    <field name="view_id"/>
+                    <field name="model_id"/>
+                    <field name="ir_field" domain="[('model_id', '=', model_id)]"/>
+                    <field name="field_relation"/>
+                    <field name="field_selection"/>
+                    <field name="widget"/>
+                    <field name="relation_limit"/>
+                    <field name="allow_quick_create"/>
+                    <field name="binary_max_size_mb"/>
+                    <field name="selection_searchable"/>
+                    <field name="number_min"/>
+                    <field name="number_max"/>
+                    <field name="number_step"/>
+                    <field name="group_name"/>
+                    <field name="group_collapsed"/>
+                    <field name="readonly"/>
+                    <field name="required"/>
+                    <field name="invisible"/>
+                </list>
             </field>
         </record>
-        <record id='weixin_mobile_field_form' model='ir.ui.view'>
-            <field name='name'>mobile.field.tree</field>
-            <field name='model'>mobile.field</field>
-            <field name='arch' type='xml'>
-                <form string='field'>
+        <record id="weixin_mobile_field_form" model="ir.ui.view">
+            <field name="name">mobile.field.form</field>
+            <field name="model">mobile.field</field>
+            <field name="arch" type="xml">
+                <form string="field">
                     <group>
-                        <field name='view_id' />
-                        <field name='ir_field'  domain="[('model_id', '=', model_id)]"/>
-                        <field name='field_relation' />
-                        <field name='field_selection' />
-                        <field name='model_id' />
-                        <field name='readonly' />
-                        <field name='required' />
-                        <field name='invisible' />
-                        <!-- <field name='is_show_edit_form' /> -->
-                        <!-- <field name='is_show_form_tree' /> -->
-                        <field name='many_field' />
+                        <field name="view_id"/>
+                        <field name="model_id"/>
+                        <field name="ir_field" domain="[('model_id', '=', model_id)]"/>
+                        <field name="field_relation"/>
+                        <field name="field_selection"/>
+                        <field name="widget"/>
+                        <field name="placeholder"/>
+                        <field name="relation_limit"/>
+                        <field name="relation_search_fields" placeholder="name,default_code"/>
+                        <field name="allow_quick_create"/>
+                        <field name="binary_filename_field" placeholder="file_name"/>
+                        <field name="binary_accept" placeholder="image/* 或 .pdf,.doc,.docx"/>
+                        <field name="binary_max_size_mb"/>
+                        <field name="image_max_width"/>
+                        <field name="image_quality"/>
+                        <field name="selection_searchable"/>
+                        <field name="number_min"/>
+                        <field name="number_max"/>
+                        <field name="number_step"/>
+                        <field name="group_name"/>
+                        <field name="group_collapsed"/>
+                        <field name="readonly"/>
+                        <field name="required"/>
+                        <field name="invisible"/>
+                        <field name="many_field"/>
                     </group>
                 </form>
             </field>
         </record>
         <record id="weixin_mobile_field_action" model="ir.actions.act_window">
-            <field name="name">action</field>
+            <field name="name">Field</field>
             <field name="res_model">mobile.field</field>
-            <field name="view_type">form</field>
-             <field name="view_mode">tree,form</field>
-            <field name="help" type="html">
-              <p class="oe_view_nocontent_create">
-                Click to register new expenses.
-              </p><p>
-              </p>
+            <field name="view_mode">list,form</field>
+        </record>
+
+        <record id="weixin_mobile_view_tree" model="ir.ui.view">
+            <field name="name">mobile.view.list</field>
+            <field name="model">mobile.view</field>
+            <field name="arch" type="xml">
+                <list string="view">
+                    <field name="mobile_action_id"/>
+                    <field name="mobile_field_ids"/>
+                    <field name="no_form"/>
+                    <field name="domain_ids"/>
+                    <field name="view_type"/>
+                </list>
             </field>
         </record>
-        <!--<menuitem id="dtfg_menu_mobile_setting_field" name="field" -->
-                  <!--parent="dtfg_menu_mobile_setting" action="weixin_mobile_field_action"/>-->
-
-
-        <record id='weixin_mobile_view_tree' model='ir.ui.view'>
-            <field name='name'>mobile.view.tree</field>
-            <field name='model'>mobile.view</field>
-            <field name='arch' type='xml'>
-                <tree string='view'>
-                    <field name='mobile_field_ids' />
-                    <field name='no_form' />
-                    <field name='domain_ids'/>
-                    <field name='view_type' />
-                </tree>
-            </field>
-        </record>
-        <record id='weixin_mobile_view_form' model='ir.ui.view'>
-            <field name='name'>mobile.view.form</field>
-            <field name='model'>mobile.view</field>
-            <field name='arch' type='xml'>
-                <form string='view'>
+        <record id="weixin_mobile_view_form" model="ir.ui.view">
+            <field name="name">mobile.view.form</field>
+            <field name="model">mobile.view</field>
+            <field name="arch" type="xml">
+                <form string="view">
                     <group>
-                        <field name='mobile_action_id' />
-                        <field name='mobile_field_ids' />
-                        <field name='no_form' />
-                        <field name='domain_ids' attrs="{'invisible': [('view_type', 'not in', ('tree', 'card'))]}"/>
-                        <field name='view_type' />
-                        <field name='context' />
-                        <field name='button_ids'/>
-                        <field name='show_form_view' attrs="{'invisible':[('no_form', '=', True)]}"/>
+                        <field name="mobile_action_id"/>
+                        <field name="mobile_field_ids"/>
+                        <field name="no_form"/>
+                        <field name="domain_ids" invisible="view_type not in ('tree', 'card')"/>
+                        <field name="view_type"/>
+                        <field name="context"/>
+                        <field name="field_layout"/>
+                        <field name="field_auto_limit"/>
+                        <field name="button_limit"/>
+                        <field name="button_collapse"/>
+                        <field name="button_ids"/>
+                        <field name="show_form_view" invisible="no_form"/>
                     </group>
                 </form>
             </field>
         </record>
         <record id="weixin_mobile_view_action" model="ir.actions.act_window">
-            <field name="name">action</field>
+            <field name="name">View</field>
             <field name="res_model">mobile.view</field>
-            <field name="view_type">form</field>
-             <field name="view_mode">tree,form</field>
-            <field name="help" type="html">
-              <p class="oe_view_nocontent_create">
-                Click to register new expenses.
-              </p><p>
-              </p>
-            </field>
+            <field name="view_mode">list,form</field>
         </record>
-        <menuitem id="dtfg_menu_mobile_setting_view" name="View"
-                  parent="dtfg_menu_mobile_setting" action="weixin_mobile_view_action"/>
+        <menuitem id="dtfg_menu_mobile_setting_view" name="View" parent="dtfg_menu_mobile_setting" action="weixin_mobile_view_action"/>
 
-        <record id='weixin_mobile_domain_form' model='ir.ui.view'>
-            <field name='name'>mobile.domain.form</field>
-            <field name='model'>mobile.domain</field>
-            <field name='arch' type='xml'>
-                <tree string='view'>
-                    <field name='domain' />
-                    <field name='sequence'/>
-                    <field name='name' />
-                </tree>
+        <record id="weixin_mobile_domain_form" model="ir.ui.view">
+            <field name="name">mobile.domain.list</field>
+            <field name="model">mobile.domain</field>
+            <field name="arch" type="xml">
+                <list string="domain">
+                    <field name="domain"/>
+                    <field name="sequence"/>
+                    <field name="name"/>
+                </list>
             </field>
         </record>
         <record id="weixin_mobile_domain_action" model="ir.actions.act_window">
-            <field name="name">domain</field>
+            <field name="name">Domain</field>
             <field name="res_model">mobile.domain</field>
-            <field name="view_type">form</field>
-             <field name="view_mode">tree</field>
-            <field name="help" type="html">
-              <p class="oe_view_nocontent_create">
-                Click to register new expenses.
-              </p><p>
-              </p>
-            </field>
+            <field name="view_mode">list</field>
         </record>
 
-         <record id='weixin_mobile_button_tree' model='ir.ui.view'>
-            <field name='name'>mobile.button.form</field>
-            <field name='model'>mobile.button</field>
-            <field name='arch' type='xml'>
-                <tree string='view'>
-                    <field name='name' />
-                    <field name='button_method'/>
-                    <field name='show_condition' />
-                    <field name='group_ids' />
-                </tree>
+        <record id="weixin_mobile_button_tree" model="ir.ui.view">
+            <field name="name">mobile.button.list</field>
+            <field name="model">mobile.button</field>
+            <field name="arch" type="xml">
+                <list string="button">
+                    <field name="sequence" widget="handle"/>
+                    <field name="name"/>
+                    <field name="button_group"/>
+                    <field name="button_method"/>
+                    <field name="button_style"/>
+                    <field name="button_folded"/>
+                    <field name="show_condition"/>
+                    <field name="group_ids" widget="many2many_tags"/>
+                </list>
             </field>
         </record>
-        <record id='weixin_mobile_button_form' model='ir.ui.view'>
-            <field name='name'>mobile.button.form</field>
-            <field name='model'>mobile.button</field>
-            <field name='arch' type='xml'>
-                <form string='view' >
+        <record id="weixin_mobile_button_form" model="ir.ui.view">
+            <field name="name">mobile.button.form</field>
+            <field name="model">mobile.button</field>
+            <field name="arch" type="xml">
+                <form string="button">
                     <group>
-                        <field name='name' />
-                        <field name='button_method'/>
-                        <field name='show_condition' />
-                        <field name='group_ids' />
+                        <field name="sequence"/>
+                        <field name="name"/>
+                        <field name="button_group"/>
+                        <field name="button_method"/>
+                        <field name="button_style"/>
+                        <field name="button_icon"/>
+                        <field name="button_folded"/>
+                        <field name="button_confirm"/>
+                        <field name="show_condition"/>
+                        <field name="group_ids" widget="many2many_tags"/>
                     </group>
                 </form>
             </field>
         </record>
         <record id="weixin_mobile_button_action" model="ir.actions.act_window">
-            <field name="name">button</field>
+            <field name="name">Button</field>
             <field name="res_model">mobile.button</field>
-            <field name="view_type">form</field>
-             <field name="view_mode">tree</field>
-            <field name="help" type="html">
-              <p class="oe_view_nocontent_create">
-                Click to register new expenses.
-              </p><p>
-              </p>
+            <field name="view_mode">list,form</field>
+        </record>
+
+        <record id="mobile_api_config_list" model="ir.ui.view">
+            <field name="name">mobile.api.config.list</field>
+            <field name="model">mobile.api.config</field>
+            <field name="arch" type="xml">
+                <list string="移动端接口配置">
+                    <field name="sequence" widget="handle"/>
+                    <field name="active"/>
+                    <field name="name"/>
+                    <field name="code"/>
+                    <field name="auth_type"/>
+                    <field name="operation"/>
+                    <field name="model_id"/>
+                    <field name="method_name"/>
+                    <field name="limit"/>
+                    <field name="use_sudo"/>
+                </list>
             </field>
         </record>
+
+        <record id="mobile_api_config_form" model="ir.ui.view">
+            <field name="name">mobile.api.config.form</field>
+            <field name="model">mobile.api.config</field>
+            <field name="arch" type="xml">
+                <form string="移动端接口配置">
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="active"/>
+                                <field name="name"/>
+                                <field name="code"/>
+                                <field name="sequence"/>
+                                <field name="auth_type"/>
+                                <field name="group_ids" widget="many2many_tags"/>
+                            </group>
+                            <group>
+                                <field name="operation"/>
+                                <field name="model_id"/>
+                                <field name="model"/>
+                                <field name="method_name" invisible="operation != 'method'"/>
+                                <field name="use_sudo"/>
+                            </group>
+                        </group>
+                        <notebook>
+                            <page string="查询配置">
+                                <group>
+                                    <field name="domain" placeholder="[]"/>
+                                    <field name="context" placeholder="{}"/>
+                                    <field name="field_names" placeholder="name,display_name"/>
+                                    <field name="order"/>
+                                    <field name="limit"/>
+                                </group>
+                            </page>
+                            <page string="说明">
+                                <div>
+                                    <p>移动端调用地址：</p>
+                                    <code>/odoo/mobile/api/&lt;接口编码&gt;</code>
+                                    <p>POST 参数可包含 domain、fields、limit、offset、order、ids、values、kwargs、context、keyword。</p>
+                                </div>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="mobile_api_config_action" model="ir.actions.act_window">
+            <field name="name">接口配置</field>
+            <field name="res_model">mobile.api.config</field>
+            <field name="view_mode">list,form</field>
+        </record>
+        <menuitem id="dtfg_menu_mobile_setting_api" name="接口配置" parent="dtfg_menu_mobile_setting" action="mobile_api_config_action"/>
+
+        <record id="mobile_sample_generator_form" model="ir.ui.view">
+            <field name="name">mobile.sample.generator.form</field>
+            <field name="model">mobile.sample.generator</field>
+            <field name="arch" type="xml">
+                <form string="生成官方模块示例">
+                    <group>
+                        <group string="模块">
+                            <field name="include_sale"/>
+                            <field name="include_purchase"/>
+                            <field name="include_inventory"/>
+                            <field name="include_account"/>
+                            <field name="include_crm"/>
+                            <field name="include_project"/>
+                            <field name="include_mrp"/>
+                        </group>
+                        <group string="结果">
+                            <field name="result" readonly="1" nolabel="1"/>
+                        </group>
+                    </group>
+                    <footer>
+                        <button name="action_generate" type="object" string="生成/更新示例配置" class="btn-primary"/>
+                        <button string="关闭" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <record id="mobile_sample_generator_action" model="ir.actions.act_window">
+            <field name="name">生成官方模块示例</field>
+            <field name="res_model">mobile.sample.generator</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+        </record>
+        <menuitem id="dtfg_menu_mobile_sample_generator" name="生成官方模块示例" parent="dtfg_menu_mobile_setting" action="mobile_sample_generator_action"/>
     </data>
-</openerp>
+</odoo>

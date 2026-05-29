@@ -1,1 +1,1 @@
-import mobile_model
+from . import mobile_model
