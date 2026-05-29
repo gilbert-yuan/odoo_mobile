@@ -185,6 +185,7 @@ class MobileView(models.Model):
         copy=True,
     )
     field_auto_limit = fields.Integer("未分组首屏字段数", default=8, copy=True)
+    summary_limit = fields.Integer("摘要外显字段数", default=3, copy=True)
     button_limit = fields.Integer("首屏按钮数", default=3, copy=True)
     button_collapse = fields.Boolean("按钮过多自动折叠", default=True, copy=True)
 
@@ -297,6 +298,18 @@ class MobileField(models.Model):
     invisible = fields.Boolean("不可见", copy=True)
     group_name = fields.Char("字段分组", copy=True)
     group_collapsed = fields.Boolean("默认折叠", copy=True)
+    summary_visible = fields.Boolean("摘要外显", copy=True)
+    summary_priority = fields.Integer("摘要排序", default=10, copy=True)
+    summary_style = fields.Selection(
+        [
+            ("auto", "自动"),
+            ("text", "普通文本"),
+            ("status", "状态徽标"),
+        ],
+        string="摘要样式",
+        default="auto",
+        copy=True,
+    )
     placeholder = fields.Char("占位提示", copy=True)
     relation_limit = fields.Integer("关联搜索条数", default=20, copy=True)
     relation_search_fields = fields.Char("关联搜索字段", copy=True, help="多个字段用英文逗号分隔，例如 name,default_code")
@@ -563,6 +576,7 @@ class MobileSampleGenerator(models.TransientModel):
                 "context": sample.get("form_context", "{}"),
                 "field_layout": sample.get("form_layout", "tabs"),
                 "field_auto_limit": sample.get("field_auto_limit", 8),
+                "summary_limit": sample.get("summary_limit", 3),
                 "button_limit": sample.get("button_limit", 3),
                 "button_collapse": sample.get("button_collapse", True),
             }
@@ -576,6 +590,7 @@ class MobileSampleGenerator(models.TransientModel):
                 "context": sample.get("context", "{}"),
                 "field_layout": sample.get("list_layout", "accordion"),
                 "field_auto_limit": sample.get("field_auto_limit", 8),
+                "summary_limit": sample.get("summary_limit", 3),
                 "button_limit": sample.get("button_limit", 3),
                 "button_collapse": sample.get("button_collapse", True),
             }
@@ -671,6 +686,9 @@ class MobileSampleGenerator(models.TransientModel):
             "invisible": spec.get("invisible", False),
             "group_name": spec.get("group", ""),
             "group_collapsed": spec.get("group_collapsed", False),
+            "summary_visible": spec.get("summary_visible", False),
+            "summary_priority": spec.get("summary_priority", sequence * 10),
+            "summary_style": spec.get("summary_style", "auto"),
             "domain": spec.get("domain", "[]"),
             "placeholder": spec.get("placeholder", ""),
             "relation_limit": spec.get("relation_limit", 20),
@@ -1150,6 +1168,9 @@ class MobileController(http.Controller):
             "invisible": field.invisible,
             "group": field.group_name or "",
             "groupCollapsed": field.group_collapsed,
+            "summaryVisible": field.summary_visible,
+            "summaryPriority": field.summary_priority or 10,
+            "summaryStyle": field.summary_style or "auto",
             "name": field.ir_field.name,
             "fieldId": field.id,
             "widget": False if field.widget == "auto" else field.widget,
@@ -1172,6 +1193,7 @@ class MobileController(http.Controller):
         return {
             "fieldLayout": view.field_layout or "auto",
             "fieldAutoLimit": view.field_auto_limit or 8,
+            "summaryLimit": view.summary_limit or 3,
             "buttonLimit": view.button_limit or 3,
             "buttonCollapse": view.button_collapse,
         }
@@ -1211,7 +1233,14 @@ class MobileController(http.Controller):
             row_fields = copy.deepcopy(fields_config)
             for field in row_fields:
                 field.update(self.card_show_val(record, field))
-            rows.append({"title": record.display_name, "id": record.id, "meta": row_fields})
+            rows.append(
+                {
+                    "title": record.display_name,
+                    "id": record.id,
+                    "meta": row_fields,
+                    "mobileOptions": self._view_mobile_options(view),
+                }
+            )
         return rows
 
     def get_card_view_data(self, view, records, model_name):

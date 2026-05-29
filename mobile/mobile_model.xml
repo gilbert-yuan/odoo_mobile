@@ -66,6 +66,9 @@
                     <field name="number_step"/>
                     <field name="group_name"/>
                     <field name="group_collapsed"/>
+                    <field name="summary_visible"/>
+                    <field name="summary_priority"/>
+                    <field name="summary_style"/>
                     <field name="readonly"/>
                     <field name="required"/>
                     <field name="invisible"/>
@@ -99,6 +102,9 @@
                         <field name="number_step"/>
                         <field name="group_name"/>
                         <field name="group_collapsed"/>
+                        <field name="summary_visible"/>
+                        <field name="summary_priority"/>
+                        <field name="summary_style"/>
                         <field name="readonly"/>
                         <field name="required"/>
                         <field name="invisible"/>
@@ -140,6 +146,7 @@
                         <field name="context"/>
                         <field name="field_layout"/>
                         <field name="field_auto_limit"/>
+                        <field name="summary_limit"/>
                         <field name="button_limit"/>
                         <field name="button_collapse"/>
                         <field name="button_ids"/>
