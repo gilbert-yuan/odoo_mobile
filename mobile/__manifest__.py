@@ -11,7 +11,7 @@
     "depends": ["base", "web"],
     "data": [
         "security/ir.model.access.csv",
-        "mobile_model.xml",
+        "views/mobile_model.xml",
     ],
     "installable": True,
     "application": False,
