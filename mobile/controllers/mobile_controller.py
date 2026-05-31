@@ -40,8 +40,199 @@ VIEW_TYPE = {
     "card": "OdooCard",
 }
 
+MOBILE_DESIGNER_GROUP = "mobile.group_mobile_designer"
+DESIGNER_ALLOWED_TYPES = {
+    "char",
+    "text",
+    "html",
+    "integer",
+    "float",
+    "monetary",
+    "boolean",
+    "date",
+    "datetime",
+    "selection",
+    "many2one",
+    "many2many",
+    "one2many",
+    "binary",
+    "reference",
+}
+DESIGNER_EXCLUDED_NAMES = {
+    "id",
+    "display_name",
+    "__last_update",
+    "create_uid",
+    "create_date",
+    "write_uid",
+    "write_date",
+    "message_ids",
+    "message_follower_ids",
+    "activity_ids",
+    "activity_state",
+    "activity_exception_decoration",
+    "activity_exception_icon",
+    "activity_date_deadline",
+}
+
 
 class MobileController(http.Controller):
+    def _designer_has_access(self):
+        user = request.env.user
+        return bool(user.has_group("base.group_system") or user.has_group(MOBILE_DESIGNER_GROUP))
+
+    def _designer_denied_response(self):
+        return _json_response({"success": False, "errMsg": "暂无配置权限，请联系管理员授权移动端配置师角色"})
+
+    def _to_bool(self, value):
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return bool(value)
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"1", "true", "yes", "y", "on"}:
+                return True
+            if normalized in {"0", "false", "no", "n", "off", ""}:
+                return False
+        return bool(value)
+
+    def _to_int(self, value, default=0, minimum=None, maximum=None):
+        try:
+            result = int(value)
+        except (TypeError, ValueError):
+            result = default
+        if minimum is not None:
+            result = max(minimum, result)
+        if maximum is not None:
+            result = min(maximum, result)
+        return result
+
+    def _to_float(self, value, default=0.0, minimum=None, maximum=None):
+        try:
+            result = float(value)
+        except (TypeError, ValueError):
+            result = default
+        if minimum is not None:
+            result = max(minimum, result)
+        if maximum is not None:
+            result = min(maximum, result)
+        return result
+
+    def _selection_options(self, model, field_name):
+        field = model._fields.get(field_name)
+        if not field:
+            return []
+        selection = field.selection
+        if isinstance(selection, str):
+            selection = getattr(model, selection)()
+        elif callable(selection):
+            selection = selection(model)
+        return [{"key": item[0], "label": item[1]} for item in (selection or [])]
+
+    def _designer_view_payload(self, view):
+        return {
+            "id": view.id,
+            "viewType": view.view_type,
+            "fieldLayout": view.field_layout or "auto",
+            "fieldAutoLimit": view.field_auto_limit or 8,
+            "summaryLimit": view.summary_limit or 3,
+            "buttonLimit": view.button_limit or 3,
+            "buttonCollapse": bool(view.button_collapse),
+        }
+
+    def _designer_field_payload(self, field):
+        return {
+            "id": field.id,
+            "irFieldId": field.ir_field.id,
+            "name": field.ir_field.name,
+            "label": field.ir_field.field_description or field.ir_field.name,
+            "type": field.field_type,
+            "relation": field.field_relation or "",
+            "sequence": field.sequence or 0,
+            "widget": field.widget or "auto",
+            "required": bool(field.required),
+            "readonly": bool(field.readonly),
+            "invisible": bool(field.invisible),
+            "groupName": field.group_name or "",
+            "groupCollapsed": bool(field.group_collapsed),
+            "summaryVisible": bool(field.summary_visible),
+            "summaryPriority": field.summary_priority or 10,
+            "summaryStyle": field.summary_style or "auto",
+            "placeholder": field.placeholder or "",
+            "relationLimit": field.relation_limit or 20,
+            "relationSearchFields": field.relation_search_fields or "",
+            "allowQuickCreate": bool(field.allow_quick_create),
+            "binaryFilenameField": field.binary_filename_field or "",
+            "binaryAccept": field.binary_accept or "",
+            "binaryMaxSizeMb": field.binary_max_size_mb or 8,
+            "imageMaxWidth": field.image_max_width or 1600,
+            "imageQuality": field.image_quality or 0.86,
+            "selectionSearchable": bool(field.selection_searchable),
+            "numberMin": field.number_min or 0,
+            "numberMax": field.number_max or 0,
+            "numberStep": field.number_step or 1,
+        }
+
+    def _designer_available_field(self, ir_field):
+        return {
+            "id": ir_field.id,
+            "name": ir_field.name,
+            "label": ir_field.field_description or ir_field.name,
+            "type": ir_field.ttype,
+            "relation": ir_field.relation or "",
+            "required": bool(ir_field.required),
+            "readonly": bool(ir_field.readonly),
+        }
+
+    def _designer_target_view(self, action, mode, view_id=0):
+        main_view = action.mobile_view_id
+        if not main_view:
+            return request.env["mobile.view"]
+        if view_id and int(view_id) == main_view.id:
+            return main_view
+        if mode == "form":
+            form_view = main_view.show_form_view
+            if view_id and form_view and int(view_id) == form_view.id:
+                return form_view
+            return form_view or main_view
+        return main_view
+
+    def _designer_target_action(self, action_id):
+        action = request.env["mobile.action"].sudo().browse(int(action_id or 0))
+        return action if action.exists() else request.env["mobile.action"]
+
+    def _designer_field_values(self, payload, view, ir_field, sequence):
+        return {
+            "sequence": sequence,
+            "view_id": view.id,
+            "field_id": False,
+            "model_id": view.model_id.id,
+            "ir_field": ir_field.id,
+            "widget": payload.get("widget") or "auto",
+            "required": self._to_bool(payload.get("required") or False),
+            "readonly": self._to_bool(payload.get("readonly") or False),
+            "invisible": self._to_bool(payload.get("invisible") or False),
+            "group_name": (payload.get("groupName") or "").strip(),
+            "group_collapsed": self._to_bool(payload.get("groupCollapsed") or False),
+            "summary_visible": self._to_bool(payload.get("summaryVisible") or False),
+            "summary_priority": self._to_int(payload.get("summaryPriority"), default=10, minimum=1, maximum=9999),
+            "summary_style": payload.get("summaryStyle") or "auto",
+            "placeholder": payload.get("placeholder") or "",
+            "relation_limit": self._to_int(payload.get("relationLimit"), default=20, minimum=1, maximum=200),
+            "relation_search_fields": (payload.get("relationSearchFields") or "").strip(),
+            "allow_quick_create": self._to_bool(payload.get("allowQuickCreate") or False),
+            "binary_filename_field": (payload.get("binaryFilenameField") or "").strip(),
+            "binary_accept": (payload.get("binaryAccept") or "").strip(),
+            "binary_max_size_mb": self._to_int(payload.get("binaryMaxSizeMb"), default=8, minimum=1, maximum=64),
+            "image_max_width": self._to_int(payload.get("imageMaxWidth"), default=1600, minimum=320, maximum=4096),
+            "image_quality": self._to_float(payload.get("imageQuality"), default=0.86, minimum=0.1, maximum=1.0),
+            "selection_searchable": self._to_bool(payload.get("selectionSearchable") if payload.get("selectionSearchable") is not None else True),
+            "number_min": self._to_float(payload.get("numberMin"), default=0.0),
+            "number_max": self._to_float(payload.get("numberMax"), default=0.0),
+            "number_step": self._to_float(payload.get("numberStep"), default=1.0, minimum=0.0001),
+        }
+
     @http.route(
         ["/odoo/mobile", "/mobile/html", "/mobile/html/", "/mobile/html/index.html"],
         auth="public",
@@ -137,6 +328,142 @@ class MobileController(http.Controller):
             "card": self.get_card_view_data,
             "tree": self.get_tree_view_data,
         }.get(view_type)
+
+    @http.route("/odoo/mobile/designer/actions", auth="user", type="http", methods=["GET"], csrf=False)
+    def mobile_designer_actions(self, **kwargs):
+        if not self._designer_has_access():
+            return self._designer_denied_response()
+        actions = request.env["mobile.action"].sudo().search([], order="id desc")
+        result = []
+        for action in actions:
+            view = action.mobile_view_id
+            if not view:
+                continue
+            form_view = view.show_form_view or view
+            result.append(
+                {
+                    "actionId": action.id,
+                    "title": action.name,
+                    "model": action.model_id.model,
+                    "modelLabel": action.model_id.name,
+                    "mainViewId": view.id,
+                    "formViewId": form_view.id,
+                    "viewType": view.view_type or "tree",
+                }
+            )
+        return _json_response({"success": True, "actions": result})
+
+    @http.route("/odoo/mobile/designer/view/config", auth="user", type="http", methods=["GET"], csrf=False)
+    def mobile_designer_view_config(self, **args):
+        if not self._designer_has_access():
+            return self._designer_denied_response()
+        action = self._designer_target_action(args.get("action_id"))
+        if not action:
+            return _json_response({"success": False, "errMsg": "未找到动作配置"})
+
+        mode = (args.get("mode") or "list").strip().lower()
+        if mode not in {"list", "form"}:
+            mode = "list"
+        view = self._designer_target_view(action, mode, view_id=args.get("view_id"))
+        if not view:
+            return _json_response({"success": False, "errMsg": "未找到视图配置"})
+
+        model_fields = request.env["ir.model.fields"].sudo().search(
+            [
+                ("model_id", "=", action.model_id.id),
+                ("store", "=", True),
+                ("ttype", "in", list(DESIGNER_ALLOWED_TYPES)),
+                ("name", "not in", list(DESIGNER_EXCLUDED_NAMES)),
+            ],
+            order="field_description, id",
+        )
+        configured_fields = view.mobile_field_ids.sudo().sorted(key=lambda item: (item.sequence or 0, item.id))
+        configured_field_ids = {item.ir_field.id for item in configured_fields}
+        available_fields = [self._designer_available_field(item) for item in model_fields]
+        current_fields = [self._designer_field_payload(item) for item in configured_fields if not item.field_id]
+        model = request.env["mobile.field"]
+        widget_options = self._selection_options(model, "widget")
+        summary_style_options = self._selection_options(model, "summary_style")
+
+        return _json_response(
+            {
+                "success": True,
+                "action": {
+                    "actionId": action.id,
+                    "title": action.name,
+                    "model": action.model_id.model,
+                    "modelLabel": action.model_id.name,
+                },
+                "view": self._designer_view_payload(view),
+                "mode": mode,
+                "fields": current_fields,
+                "availableFields": available_fields,
+                "configuredFieldIds": list(configured_field_ids),
+                "widgetOptions": widget_options,
+                "summaryStyleOptions": summary_style_options,
+            }
+        )
+
+    @http.route("/odoo/mobile/designer/view/save", auth="user", type="json", csrf=False)
+    def mobile_designer_view_save(self, **args):
+        if not self._designer_has_access():
+            return {"success": False, "errMsg": "暂无配置权限，请联系管理员授权移动端配置师角色"}
+
+        payload = _json_request_payload(args)
+        action = self._designer_target_action(payload.get("action_id"))
+        if not action:
+            return {"success": False, "errMsg": "未找到动作配置"}
+        mode = str(payload.get("mode") or "list").strip().lower()
+        if mode not in {"list", "form"}:
+            mode = "list"
+        view = self._designer_target_view(action, mode, view_id=payload.get("view_id"))
+        if not view:
+            return {"success": False, "errMsg": "未找到视图配置"}
+        fields_payload = payload.get("fields")
+        if not isinstance(fields_payload, list):
+            return {"success": False, "errMsg": "字段配置格式错误"}
+
+        options = payload.get("options") or {}
+        view_values = {
+            "field_layout": options.get("fieldLayout") or view.field_layout or "auto",
+            "field_auto_limit": self._to_int(options.get("fieldAutoLimit"), default=view.field_auto_limit or 8, minimum=1, maximum=40),
+            "summary_limit": self._to_int(options.get("summaryLimit"), default=view.summary_limit or 3, minimum=1, maximum=12),
+            "button_limit": self._to_int(options.get("buttonLimit"), default=view.button_limit or 3, minimum=1, maximum=8),
+            "button_collapse": self._to_bool(options.get("buttonCollapse") if options.get("buttonCollapse") is not None else view.button_collapse),
+        }
+        view.sudo().write(view_values)
+
+        ir_fields = request.env["ir.model.fields"].sudo().search(
+            [("model_id", "=", action.model_id.id), ("store", "=", True), ("ttype", "in", list(DESIGNER_ALLOWED_TYPES))]
+        )
+        ir_field_map = {field.id: field for field in ir_fields}
+        existed_top_fields = {field.id: field for field in view.mobile_field_ids.sudo().filtered(lambda item: not item.field_id)}
+        kept_ids = []
+
+        for index, item in enumerate(fields_payload, start=1):
+            if not isinstance(item, dict):
+                continue
+            ir_field = ir_field_map.get(self._to_int(item.get("irFieldId"), default=0))
+            if not ir_field:
+                continue
+            sequence = self._to_int(item.get("sequence"), default=index * 10, minimum=1, maximum=99999)
+            values = self._designer_field_values(item, view, ir_field, sequence=sequence)
+            field_id = self._to_int(item.get("id"), default=0)
+            field = existed_top_fields.get(field_id)
+            if field:
+                field.sudo().write(values)
+                kept_ids.append(field.id)
+                continue
+            created = request.env["mobile.field"].sudo().create(values)
+            kept_ids.append(created.id)
+
+        delete_targets = [field for field_id, field in existed_top_fields.items() if field_id not in set(kept_ids)]
+        if delete_targets:
+            delete_ids = [field.id for field in delete_targets]
+            request.env["mobile.field"].sudo().search([("field_id", "in", delete_ids)]).unlink()
+            request.env["mobile.field"].sudo().browse(delete_ids).unlink()
+
+        return {"success": True, "errMsg": "配置已保存"}
 
     def get_all_field_setting(self, field):
         return {

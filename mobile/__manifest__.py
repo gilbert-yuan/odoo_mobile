@@ -10,6 +10,7 @@
     "version": "18.0.1.0.0",
     "depends": ["base", "web"],
     "data": [
+        "security/mobile_security.xml",
         "security/ir.model.access.csv",
         "views/mobile_model.xml",
     ],
