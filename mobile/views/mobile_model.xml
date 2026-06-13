@@ -305,8 +305,12 @@
                     <field name="chart_type"/>
                     <field name="model_id"/>
                     <field name="group_by"/>
+                    <field name="group_field_id" invisible="group_by != 'field'"/>
                     <field name="measure_type"/>
                     <field name="measure_field_id"/>
+                    <field name="sort_by"/>
+                    <field name="result_limit"/>
+                    <field name="cumulative"/>
                 </list>
             </field>
         </record>
@@ -317,32 +321,64 @@
             <field name="arch" type="xml">
                 <form string="移动图表配置">
                     <sheet>
-                        <group>
+                        <group string="基础信息">
                             <group>
                                 <field name="active"/>
                                 <field name="sequence"/>
                                 <field name="name"/>
                                 <field name="chart_code"/>
                                 <field name="chart_type"/>
+                                <field name="description"/>
                             </group>
                             <group>
                                 <field name="model_id"/>
                                 <field name="date_field_id" domain="[('model_id', '=', model_id), ('ttype', 'in', ['date', 'datetime'])]"/>
-                                <field name="person_field_id" domain="[('model_id', '=', model_id), ('ttype', '=', 'many2one'), ('relation', '=', 'res.users')]"/>
                                 <field name="group_by"/>
+                                <field name="person_field_id" domain="[('model_id', '=', model_id), ('ttype', '=', 'many2one'), ('relation', '=', 'res.users')]" invisible="group_by != 'person'"/>
+                                <field name="group_field_id" domain="[('model_id', '=', model_id), ('ttype', 'in', ['char', 'selection', 'many2one', 'boolean', 'date', 'datetime', 'integer', 'float', 'monetary'])]" invisible="group_by != 'field'"/>
                                 <field name="measure_type"/>
-                                <field name="measure_field_id" domain="[('model_id', '=', model_id), ('ttype', 'in', ['integer', 'float', 'monetary'])]"/>
+                                <field name="measure_field_id" domain="[('model_id', '=', model_id), ('ttype', 'in', ['integer', 'float', 'monetary'])]" invisible="measure_type == 'count'"/>
+                                <field name="y_axis_name"/>
                             </group>
                         </group>
-                        <group>
-                            <field name="state_field"/>
-                            <field name="done_states"/>
-                            <field name="y_axis_name"/>
-                            <field name="description"/>
-                        </group>
-                        <group>
-                            <field name="base_domain" placeholder="[]"/>
-                        </group>
+                        <notebook>
+                            <page string="数据规则">
+                                <group>
+                                    <group string="过滤条件">
+                                        <field name="state_field_id" domain="[('model_id', '=', model_id), ('ttype', 'in', ['selection', 'char'])]"/>
+                                        <field name="state_field" invisible="1"/>
+                                        <field name="done_states" placeholder="sale,done"/>
+                                        <field name="base_domain" placeholder="[]"/>
+                                        <field name="allow_user_filter"/>
+                                    </group>
+                                    <group string="排序与聚合">
+                                        <field name="sort_by"/>
+                                        <field name="result_limit"/>
+                                        <field name="cumulative"/>
+                                        <field name="empty_label"/>
+                                    </group>
+                                </group>
+                            </page>
+                            <page string="展示样式">
+                                <group>
+                                    <group string="图形展示">
+                                        <field name="theme_color" placeholder="#1B66D2"/>
+                                        <field name="show_data_labels"/>
+                                        <field name="show_detail_table"/>
+                                    </group>
+                                    <group string="数值格式">
+                                        <field name="value_prefix"/>
+                                        <field name="value_suffix"/>
+                                        <field name="value_precision"/>
+                                    </group>
+                                </group>
+                            </page>
+                            <page string="说明">
+                                <group>
+                                    <field name="description"/>
+                                </group>
+                            </page>
+                        </notebook>
                     </sheet>
                 </form>
             </field>

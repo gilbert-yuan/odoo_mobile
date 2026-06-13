@@ -754,8 +754,8 @@ class MobileSampleGenerator(models.TransientModel):
             "image_max_width": spec.get("image_max_width", 1600),
             "image_quality": spec.get("image_quality", 0.86),
             "selection_searchable": spec.get("searchable", True),
-            "number_min": spec.get("min", 0),
-            "number_max": spec.get("max", 0),
+            "number_min": spec.get("min", False),
+            "number_max": spec.get("max", False),
             "number_step": spec.get("step", 1),
         }
         return self.env["mobile.field"].sudo().create(values)

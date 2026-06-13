@@ -256,8 +256,8 @@ class MobileQuickConfigWizard(models.TransientModel):
             "image_max_width": 1600,
             "image_quality": 0.86,
             "selection_searchable": True,
-            "number_min": 0,
-            "number_max": 0,
+            "number_min": False,
+            "number_max": False,
             "number_step": 1,
         }
 

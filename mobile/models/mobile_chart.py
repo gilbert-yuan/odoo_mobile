@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import re
 from datetime import timedelta
 
 from odoo import api, fields, models
@@ -10,6 +11,9 @@ class MobileChartConfig(models.Model):
     _name = "mobile.chart.config"
     _description = "Mobile Chart Config"
     _order = "sequence, id"
+
+    _groupable_field_types = ("char", "selection", "many2one", "boolean", "date", "datetime", "integer", "float", "monetary")
+    _hex_color_re = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
 
     @api.model
     def _supported_model_domain(self):
@@ -29,6 +33,16 @@ class MobileChartConfig(models.Model):
     def _compute_measure_field_name(self):
         for rec in self:
             rec.measure_field_name = rec.measure_field_id.name if rec.measure_field_id and rec.measure_field_id.model_id == rec.model_id else False
+
+    @api.depends("model_id", "group_field_id")
+    def _compute_group_field_name(self):
+        for rec in self:
+            rec.group_field_name = rec.group_field_id.name if rec.group_field_id and rec.group_field_id.model_id == rec.model_id else False
+
+    @api.depends("model_id", "state_field_id")
+    def _compute_state_field_name(self):
+        for rec in self:
+            rec.state_field_name = rec.state_field_id.name if rec.state_field_id and rec.state_field_id.model_id == rec.model_id else False
 
     sequence = fields.Integer("顺序", default=10)
     active = fields.Boolean("启用", default=True)
@@ -64,11 +78,26 @@ class MobileChartConfig(models.Model):
     )
     person_field_name = fields.Char(string="人员字段名", compute="_compute_person_field_name", store=True)
     group_by = fields.Selection(
-        [("month", "按月"), ("week", "按周"), ("day", "按天"), ("person", "按人员")],
+        [
+            ("day", "按天"),
+            ("week", "按周"),
+            ("month", "按月"),
+            ("quarter", "按季度"),
+            ("year", "按年"),
+            ("person", "按人员"),
+            ("field", "按字段"),
+        ],
         string="分组方式",
         default="month",
         required=True,
     )
+    group_field_id = fields.Many2one(
+        "ir.model.fields",
+        string="分组字段",
+        ondelete="cascade",
+        domain="[('model_id', '=', model_id), ('ttype', 'in', ['char', 'selection', 'many2one', 'boolean', 'date', 'datetime', 'integer', 'float', 'monetary'])]",
+    )
+    group_field_name = fields.Char(string="分组字段名", compute="_compute_group_field_name", store=True)
     measure_type = fields.Selection(
         [("count", "记录数"), ("sum", "求和"), ("avg", "平均值")],
         string="指标方式",
@@ -82,8 +111,37 @@ class MobileChartConfig(models.Model):
         domain="[('model_id', '=', model_id), ('ttype', 'in', ['integer', 'float', 'monetary'])]",
     )
     measure_field_name = fields.Char(string="指标字段名", compute="_compute_measure_field_name", store=True)
+    sort_by = fields.Selection(
+        [
+            ("auto", "自动"),
+            ("label_asc", "标签正序"),
+            ("label_desc", "标签倒序"),
+            ("value_desc", "数值从高到低"),
+            ("value_asc", "数值从低到高"),
+        ],
+        string="排序方式",
+        default="auto",
+        required=True,
+    )
+    result_limit = fields.Integer("显示条数", default=12, help="0 表示不限制")
+    cumulative = fields.Boolean("累计展示", default=False, help="将各分组值按顺序做累计")
+    allow_user_filter = fields.Boolean("允许前端按人员筛选", default=True)
+    show_data_labels = fields.Boolean("显示图上数值", default=True)
+    show_detail_table = fields.Boolean("显示明细表", default=True)
+    theme_color = fields.Char("主题色", default="#1B66D2", help="支持 #RGB 或 #RRGGBB")
+    value_prefix = fields.Char("数值前缀")
+    value_suffix = fields.Char("数值后缀")
+    value_precision = fields.Integer("小数位", default=0)
+    empty_label = fields.Char("空值标签", default="未设置")
     base_domain = fields.Text("基础过滤域", default="[]")
     state_field = fields.Char("状态字段", default="state", help="例如 state")
+    state_field_id = fields.Many2one(
+        "ir.model.fields",
+        string="状态过滤字段",
+        ondelete="cascade",
+        domain="[('model_id', '=', model_id), ('ttype', 'in', ['selection', 'char'])]",
+    )
+    state_field_name = fields.Char(string="状态字段名", compute="_compute_state_field_name", store=True)
     done_states = fields.Char("完成状态值", default="sale,done", help="逗号分隔，例如 sale,done")
     y_axis_name = fields.Char("Y轴名称", default="数值")
     description = fields.Char("说明")
@@ -98,24 +156,35 @@ class MobileChartConfig(models.Model):
             if not rec.model_id:
                 rec.date_field_id = False
                 rec.person_field_id = False
+                rec.group_field_id = False
                 rec.measure_field_id = False
+                rec.state_field_id = False
                 continue
             if rec.date_field_id and rec.date_field_id.model_id != rec.model_id:
                 rec.date_field_id = False
             if rec.person_field_id and rec.person_field_id.model_id != rec.model_id:
                 rec.person_field_id = False
+            if rec.group_field_id and rec.group_field_id.model_id != rec.model_id:
+                rec.group_field_id = False
             if rec.measure_field_id and rec.measure_field_id.model_id != rec.model_id:
                 rec.measure_field_id = False
+            if rec.state_field_id and rec.state_field_id.model_id != rec.model_id:
+                rec.state_field_id = False
 
-    @api.constrains("group_by", "person_field_id")
-    def _check_person_group(self):
+    @api.constrains("group_by", "person_field_id", "group_field_id")
+    def _check_group_fields(self):
         for rec in self:
             if rec.group_by == "person" and not rec.person_field_id:
                 raise ValidationError("按人员分组必须配置人员字段。")
+            if rec.group_by == "field" and not rec.group_field_id:
+                raise ValidationError("按字段分组必须配置分组字段。")
             if rec.person_field_id and rec.person_field_id.relation != "res.users":
                 raise ValidationError("人员字段必须关联到 res.users。")
-            if rec.group_by != "person" and not rec.person_field_id:
-                continue
+            if rec.group_field_id:
+                if rec.group_field_id.model_id != rec.model_id:
+                    raise ValidationError("分组字段必须属于当前统计模型。")
+                if rec.group_field_id.ttype not in self._groupable_field_types:
+                    raise ValidationError("分组字段类型暂不支持用于图表聚合。")
 
     @api.constrains("measure_type", "measure_field_id")
     def _check_measure_field(self):
@@ -131,6 +200,23 @@ class MobileChartConfig(models.Model):
             if rec.date_field_id and rec.date_field_id.ttype not in ("date", "datetime"):
                 raise ValidationError("时间字段必须是日期或日期时间类型。")
 
+    @api.constrains("state_field_id")
+    def _check_state_field(self):
+        for rec in self:
+            if rec.state_field_id and rec.state_field_id.ttype not in ("selection", "char"):
+                raise ValidationError("状态过滤字段必须是选择或字符类型。")
+
+    @api.constrains("result_limit", "value_precision", "theme_color")
+    def _check_display_options(self):
+        for rec in self:
+            if rec.result_limit < 0:
+                raise ValidationError("显示条数不能小于 0。")
+            if rec.value_precision < 0 or rec.value_precision > 6:
+                raise ValidationError("小数位请控制在 0 到 6 之间。")
+            color = (rec.theme_color or "").strip()
+            if color and not self._hex_color_re.match(color):
+                raise ValidationError("主题色仅支持 #RGB 或 #RRGGBB 格式。")
+
     @api.constrains("chart_code")
     def _check_chart_code(self):
         for rec in self:
@@ -140,15 +226,43 @@ class MobileChartConfig(models.Model):
             if any(ch not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-" for ch in code):
                 raise ValidationError("图表编码仅支持字母、数字、下划线和中划线。")
 
+    def _selection_label(self, field_name, value):
+        field = self._fields[field_name]
+        return dict(field.selection).get(value, value)
+
     def chart_payload(self):
         self.ensure_one()
+        group_label = self._selection_label("group_by", self.group_by)
+        if self.group_by == "person":
+            dimension_label = self.person_field_id.field_description or "人员"
+        elif self.group_by == "field":
+            dimension_label = self.group_field_id.field_description or "分组字段"
+        else:
+            dimension_label = group_label
         return {
             "id": self.id,
             "code": self.chart_code,
             "title": self.name,
             "type": self.chart_type,
             "groupBy": self.group_by,
+            "groupByLabel": group_label,
+            "dimensionLabel": dimension_label,
+            "groupFieldLabel": self.group_field_id.field_description or "",
             "measureType": self.measure_type,
+            "measureTypeLabel": self._selection_label("measure_type", self.measure_type),
+            "measureLabel": self.measure_field_id.field_description or ("记录数" if self.measure_type == "count" else "数值"),
+            "sortBy": self.sort_by,
+            "sortByLabel": self._selection_label("sort_by", self.sort_by),
+            "resultLimit": self.result_limit or 0,
+            "cumulative": bool(self.cumulative),
+            "userFilterEnabled": bool(self.allow_user_filter and self.person_field_name),
+            "showDataLabels": bool(self.show_data_labels),
+            "showDetailTable": bool(self.show_detail_table),
+            "color": (self.theme_color or "#1B66D2").strip() or "#1B66D2",
+            "valuePrefix": self.value_prefix or "",
+            "valueSuffix": self.value_suffix or "",
+            "valuePrecision": self.value_precision or 0,
+            "emptyLabel": self.empty_label or "未设置",
             "yAxisName": self.y_axis_name or "数值",
             "description": self.description or "",
         }
@@ -310,6 +424,7 @@ class MobileSampleGeneratorChartMixin(models.TransientModel):
         date_field = self._resolve_field(model, {"name": "date_order", "candidates": ["date_order", "create_date"]})
         person_field = self._resolve_field(model, {"name": "user_id", "candidates": ["user_id"]})
         amount_field = self._resolve_field(model, {"name": "amount_total", "candidates": ["amount_total"]})
+        state_field = self._resolve_field(model, {"name": "state", "candidates": ["state"]})
         if not (date_field and person_field and amount_field):
             return "跳过 销售图表：缺少核心字段。"
 
@@ -318,8 +433,21 @@ class MobileSampleGeneratorChartMixin(models.TransientModel):
             "model_id": model.id,
             "date_field_id": date_field.id,
             "person_field_id": person_field.id,
+            "group_field_id": False,
             "base_domain": "[]",
+            "sort_by": "auto",
+            "result_limit": 12,
+            "cumulative": False,
+            "allow_user_filter": True,
+            "show_data_labels": True,
+            "show_detail_table": True,
+            "theme_color": "#1B66D2",
+            "value_prefix": "",
+            "value_suffix": "",
+            "value_precision": 0,
+            "empty_label": "未设置",
             "state_field": "state",
+            "state_field_id": state_field.id if state_field else False,
             "done_states": "sale,done",
         }
         self._ensure_chart(
@@ -332,6 +460,7 @@ class MobileSampleGeneratorChartMixin(models.TransientModel):
                 "group_by": "month",
                 "measure_type": "count",
                 "measure_field_id": False,
+                "result_limit": 6,
                 "y_axis_name": "订单数",
                 "description": "按月统计销售订单数量增长",
             }
@@ -346,6 +475,9 @@ class MobileSampleGeneratorChartMixin(models.TransientModel):
                 "group_by": "month",
                 "measure_type": "sum",
                 "measure_field_id": amount_field.id,
+                "result_limit": 6,
+                "theme_color": "#1E8E5A",
+                "value_precision": 2,
                 "y_axis_name": "销售金额",
                 "description": "按月统计销售金额",
             }
@@ -360,6 +492,9 @@ class MobileSampleGeneratorChartMixin(models.TransientModel):
                 "group_by": "person",
                 "measure_type": "sum",
                 "measure_field_id": amount_field.id,
+                "sort_by": "value_desc",
+                "theme_color": "#D97706",
+                "value_precision": 2,
                 "y_axis_name": "销售金额",
                 "description": "按销售员统计销售金额",
             }

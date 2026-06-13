@@ -40,7 +40,6 @@ VIEW_TYPE = {
     "card": "OdooCard",
 }
 
-MOBILE_DESIGNER_GROUP = "mobile.group_mobile_designer"
 DESIGNER_ALLOWED_TYPES = {
     "char",
     "text",
@@ -77,12 +76,23 @@ DESIGNER_EXCLUDED_NAMES = {
 
 
 class MobileController(http.Controller):
-    def _designer_has_access(self):
+    def _is_mobile_designer_admin(self):
+        return bool(request.env.user.has_group("base.group_system"))
+
+    def _mobile_session_payload(self):
         user = request.env.user
-        return bool(user.has_group("base.group_system") or user.has_group(MOBILE_DESIGNER_GROUP))
+        return {
+            "uid": request.session.uid or False,
+            "lang": request.env.context.get("lang") or user.lang or "zh_CN",
+            "userName": user.name or "",
+            "canManageDesigner": self._is_mobile_designer_admin(),
+        }
+
+    def _designer_has_access(self):
+        return self._is_mobile_designer_admin()
 
     def _designer_denied_response(self):
-        return _json_response({"success": False, "errMsg": "暂无配置权限，请联系管理员授权移动端配置师角色"})
+        return _json_response({"success": False, "errMsg": "仅系统管理员可使用手机端拖拽配置"})
 
     def _to_bool(self, value):
         if isinstance(value, bool):
@@ -118,6 +128,26 @@ class MobileController(http.Controller):
         if maximum is not None:
             result = min(maximum, result)
         return result
+
+    def _to_optional_float(self, value, minimum=None, maximum=None):
+        if value is None or value is False:
+            return False
+        if isinstance(value, str) and not value.strip():
+            return False
+        return self._to_float(value, default=0.0, minimum=minimum, maximum=maximum)
+
+    def _number_min_value(self, field):
+        return None if field.number_min is False or field.number_min is None else field.number_min
+
+    def _number_max_value(self, field):
+        if field.number_max is False or field.number_max is None:
+            return None
+        min_value = self._number_min_value(field)
+        max_value = field.number_max
+        # Older designer saves wrote empty max values as 0, which made inputs reject any positive number.
+        if max_value == 0 and (min_value is None or min_value == 0):
+            return None
+        return max_value
 
     def _selection_options(self, model, field_name):
         field = model._fields.get(field_name)
@@ -169,8 +199,8 @@ class MobileController(http.Controller):
             "imageMaxWidth": field.image_max_width or 1600,
             "imageQuality": field.image_quality or 0.86,
             "selectionSearchable": bool(field.selection_searchable),
-            "numberMin": field.number_min or 0,
-            "numberMax": field.number_max or 0,
+            "numberMin": self._number_min_value(field),
+            "numberMax": self._number_max_value(field),
             "numberStep": field.number_step or 1,
         }
 
@@ -228,8 +258,8 @@ class MobileController(http.Controller):
             "image_max_width": self._to_int(payload.get("imageMaxWidth"), default=1600, minimum=320, maximum=4096),
             "image_quality": self._to_float(payload.get("imageQuality"), default=0.86, minimum=0.1, maximum=1.0),
             "selection_searchable": self._to_bool(payload.get("selectionSearchable") if payload.get("selectionSearchable") is not None else True),
-            "number_min": self._to_float(payload.get("numberMin"), default=0.0),
-            "number_max": self._to_float(payload.get("numberMax"), default=0.0),
+            "number_min": self._to_optional_float(payload.get("numberMin")),
+            "number_max": self._to_optional_float(payload.get("numberMax")),
             "number_step": self._to_float(payload.get("numberStep"), default=1.0, minimum=0.0001),
         }
 
@@ -272,6 +302,10 @@ class MobileController(http.Controller):
             for label, row in grouped.items()
         ]
         return _json_response(sorted(grid_list, key=lambda grid: grid.get("sequence") or 0))
+
+    @http.route("/odoo/mobile/session/info", auth="user", type="http", methods=["GET"], csrf=False)
+    def mobile_session_info(self, **kwargs):
+        return _json_response({"success": True, **self._mobile_session_payload()})
 
     @http.route("/odoo/mobile/get/action/views", auth="user", type="http", methods=["GET"], csrf=False)
     def get_action_views(self, **args):
@@ -491,8 +525,8 @@ class MobileController(http.Controller):
             "imageMaxWidth": field.image_max_width or 1600,
             "imageQuality": field.image_quality or 0.86,
             "searchable": field.selection_searchable,
-            "min": field.number_min,
-            "max": field.number_max,
+            "min": self._number_min_value(field),
+            "max": self._number_max_value(field),
             "step": field.number_step or 1,
         }
 
@@ -934,7 +968,8 @@ class MobileController(http.Controller):
         uid = auth_info.get("uid")
         if uid and uid == request.session.uid:
             request.session.db = request.db
-            return {"success": True, "errMsg": "登录成功！", "uid": uid}
+            session_payload = self._mobile_session_payload()
+            return {"success": True, "errMsg": "登录成功！", "uid": uid, **session_payload}
         if uid:
             return {"success": False, "errMsg": "该账号需要额外验证，请使用网页端登录"}
         return {"success": False, "errMsg": "账号或密码错误"}
