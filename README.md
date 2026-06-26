@@ -1,3 +1,5 @@
+# 最新已经在odoo18上运行
+
 ![996.icu](https://img.shields.io/badge/link-996.icu-red.svg)
 # odoo_mobile 
 # master 分支为最新的代码 10.0的。
