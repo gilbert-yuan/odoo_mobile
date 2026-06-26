@@ -1,3 +1,7 @@
+# 最新已在ODOO18 测试通过 最新前端源码不放出来了。花了不少token钱。。
+
+
+
 ![996.icu](https://img.shields.io/badge/link-996.icu-red.svg)
 # odoo_mobile 
 # master 分支为最新的代码 10.0的。
